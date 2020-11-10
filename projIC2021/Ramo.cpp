@@ -2,8 +2,8 @@
 
 map<string, TIPORAMO> mapRamo
 {
-	{"0", NR},
-	{"1", SW},
+	{"1", NR},
+	{"2", SW},
 	{"3", CS}
 };
 

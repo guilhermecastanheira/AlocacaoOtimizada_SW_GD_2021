@@ -16,9 +16,13 @@ Circuito::~Circuito()
 
 Barra* Circuito::getBarra(int idbrr)
 {
-	if (this->barralista[idbrr - 1])
+	for (int k = 0; k < barralista.size(); k++)
 	{
-		return this->barralista[idbrr - 1];
+		if (this->barralista[k]->id == idbrr)
+		{
+			return this->barralista[k];
+		}
 	}
+	
 	return nullptr;
 }

@@ -2,7 +2,7 @@
 
 bool SistemaDistribuicao::elementofim(string ler)
 {
-    if (ler == "BARRA" || ler == "RAMO")
+    if (ler == "BARRA" || ler == "RAMO" || ler == "FIM")
     {
         return true;
     }
@@ -53,7 +53,7 @@ Circuito* SistemaDistribuicao::DadosSistema(string arq)
 
             getline(inputarq, linha, ',');
 
-            while (!elementofim(linha))
+            do
             {
                 pBarra = new Barra(); //cria um objeto barra
 
@@ -70,9 +70,11 @@ Circuito* SistemaDistribuicao::DadosSistema(string arq)
 
                 pCircuito->barralista.push_back(pBarra); //armazena a barra no vetor de barras
 
+                getline(inputarq, linha, '\n');
                 getline(inputarq, linha, ',');
-            }
-            //fim da adicao de barras
+
+            } while (!elementofim(linha)); break;
+            //fim leitura das barras
 
         case RAMO:
 
@@ -80,7 +82,7 @@ Circuito* SistemaDistribuicao::DadosSistema(string arq)
 
             getline(inputarq, linha, ',');
 
-            while (!elementofim(linha))
+            do 
             {
                 pRamo = new Ramo();
 
@@ -106,8 +108,11 @@ Circuito* SistemaDistribuicao::DadosSistema(string arq)
 
                 pCircuito->ramolista.push_back(pRamo); //armazena o ramo no vetor de ramos
 
+                getline(inputarq, linha, '\n');
                 getline(inputarq, linha, ',');
-            }
+
+            } while (!elementofim(linha)); break;
+            //fim leitura dos ramos
 
         default:
             break;
