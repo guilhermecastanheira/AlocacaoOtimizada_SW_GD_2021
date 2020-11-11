@@ -38,7 +38,6 @@ Circuito* SistemaDistribuicao::DadosSistema(string arq)
     if (!inputarq.is_open())
     {
         return nullptr;
-
     }
 
     getline(inputarq, linha, ',');
