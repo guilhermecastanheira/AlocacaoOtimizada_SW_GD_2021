@@ -5,11 +5,13 @@
 class FluxoPotencia : public Circuito 
 {
 public:
-	FluxoPotencia();
+	FluxoPotencia(Circuito* circuit);
 	~FluxoPotencia();
 
 	const float tolerancia;
 	complex<float>tensaoInicial;
+
+	Circuito* pCirc;
 
 
 };
