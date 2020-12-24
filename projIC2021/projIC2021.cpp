@@ -2,6 +2,14 @@
 
 #include <iostream>
 #include "SistemaDistribuicao.h"
+#include "FluxoPotencia.h"
+
+//PARAMETROS
+
+complex<float> Vi = 13800.00; //tensao inicial nas barras
+const float Vbase = 13800.00;
+const float Sbase = 100*pow(10,3);
+const float tolerancia_pflow = 0.00001; //tolerancia do fluxo de potencia
 
 
 int main()
@@ -10,6 +18,9 @@ int main()
     Circuito* pC;
     pC = pSD->DadosSistema("sistematesteEX.txt");
 
+    FluxoPotencia* pFluxo = new FluxoPotencia(pC, tolerancia_pflow, Vi, Vbase, Sbase);
+    pFluxo->resultado();
+    
     //fazer o fluxo de cargas
 
     //fazer a metaheuristica

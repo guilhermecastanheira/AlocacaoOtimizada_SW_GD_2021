@@ -20,16 +20,7 @@ Ramo::Ramo()
 
 //destrutor - apaga ponteiros
 Ramo::~Ramo()
-{
-	if (this->pb1)
-	{
-		delete this->pb1;
-	}
-	if (this->pb2)
-	{
-		delete this->pb2;
-	}
-}
+{ }
 
 //define o tipo do ramo
 TIPORAMO Ramo::TipoRamo(string idramo)
