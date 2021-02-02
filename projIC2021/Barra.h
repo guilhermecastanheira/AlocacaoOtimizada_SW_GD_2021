@@ -6,7 +6,7 @@
 
 using namespace std;
 
-enum TIPOBARRA { N, GD, SE };	/*	N:	barra normal
+enum TIPOBARRA { N, GD, SE };	/*		N:barra normal
 										GD: barra com GD
 										SE: subestacao		*/
 

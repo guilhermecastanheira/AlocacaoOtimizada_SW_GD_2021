@@ -24,6 +24,21 @@ ELEMENTO SistemaDistribuicao::NomeElemento(string nome)
     }
 }
 
+ELEMENTO SistemaDistribuicao::VerifSUB(string sub)
+{
+    int num = 0;
+    num = stoi(sub);
+
+    if (num > 1000)
+    {
+        return SUB;
+    }
+    else
+    {
+        return nSUB;
+    }
+}
+
 Circuito* SistemaDistribuicao::DadosSistema(string arq)
 {
     ifstream inputarq;
@@ -126,4 +141,50 @@ Circuito* SistemaDistribuicao::DadosSistema(string arq)
     {
         return nullptr;
     }
+}
+
+void SistemaDistribuicao::Topologia(Circuito* pc)
+{
+    vector<Ramo*>auxiliar;
+
+    //divisao dos subsistemas formado por cada alimentador
+    for (int k = 0; k < pc->ramolista.size(); k++)
+    {
+        if (pc->ramolista[k]->estadoRamo == ON)
+        {
+            if (k == 0)
+            {
+                auxiliar.push_back(pc->ramolista[k]);
+            }
+            else
+            {
+                if (pc->ramolista[k]->pb1->tipoBarra == SE)
+                {
+                    ss.push_back(auxiliar);
+                    auxiliar.clear();
+                }
+                else
+                {
+                    if (pc->ramolista[k]->tipoRamo != CS)
+                    {
+                        auxiliar.push_back(pc->ramolista[k]);
+                    }
+                }
+            }
+        }
+    }
+
+    ss.push_back(auxiliar);
+    auxiliar.clear();
+
+    //ramos de interconecao entre alimentadores
+    for (int k = 0; k < pc->ramolista.size(); k++)
+    {
+        if (pc->ramolista[k]->tipoRamo == CS)
+        {
+            interlig.push_back(pc->ramolista[k]);
+        }
+    }
+
+
 }

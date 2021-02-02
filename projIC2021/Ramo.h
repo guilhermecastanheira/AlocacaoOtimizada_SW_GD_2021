@@ -6,7 +6,7 @@
 
 using namespace std;
 
-enum TIPORAMO { NR, SW, CS };	/*	SW: ramo com chave de manobra
+enum TIPORAMO { NR, SW, CS };	/*		SW: ramo com chave de manobra
 										NR:	ramo normal
 										CS:	ramo de interconexao entre alimentadores		*/
 

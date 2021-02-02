@@ -4,8 +4,8 @@
 //funcao que define se a barra tem GD ou nao
 map<string, TIPOBARRA> mapBarra
 {
-	{"0", N},
-	{"1", GD},
+	{"1", N},
+	{"2", GD},
 	{"3", SE}
 };
 

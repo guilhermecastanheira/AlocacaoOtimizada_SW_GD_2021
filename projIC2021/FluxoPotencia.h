@@ -14,6 +14,7 @@ public:
 	void layer();
 	void forwardsweep();
 	void backwardsweep();
+	bool analise_tolerancia();
 
 
 	Circuito* pCirc;

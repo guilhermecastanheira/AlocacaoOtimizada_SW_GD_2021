@@ -1,0 +1,9 @@
+# REGRA ARQUIVO TXT --IMPORTANTE--
+
+    - Colocar em ordem os ramos
+    - Colocar em ordem as barras
+    - Colocar valores em kVA nas potências
+
+    - Para BARRAS -> nó inicial, nó final, potencia ativa, potencia reativa, tipo de barra
+
+    - Para RAMOS -> barra inicial, barra final, resistencia da linha, reatancia da linha, comprimento da linha(km), tipo do ramo, estado do ramo      

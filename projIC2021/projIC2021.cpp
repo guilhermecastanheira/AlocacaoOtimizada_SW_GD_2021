@@ -1,5 +1,6 @@
 //Programa principal
 
+
 #include <iostream>
 #include "SistemaDistribuicao.h"
 #include "FluxoPotencia.h"
@@ -17,6 +18,10 @@ int main()
     SistemaDistribuicao* pSD = new SistemaDistribuicao();
     Circuito* pC;
     pC = pSD->DadosSistema("sistematesteEX.txt");
+
+    pSD->Topologia(pC); //monta os subsistemas
+    
+
 
     FluxoPotencia* pFluxo = new FluxoPotencia(pC, tolerancia_pflow, Vi, Vbase, Sbase);
     pFluxo->resultado();

@@ -53,5 +53,6 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="sistematesteEX.txt" />
+    <Text Include="NOTAS_REGRAS.txt" />
   </ItemGroup>
 </Project>

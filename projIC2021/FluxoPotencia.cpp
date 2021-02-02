@@ -16,8 +16,18 @@ void FluxoPotencia::inicializar()
 	}
 }
 
+void FluxoPotencia::backwardsweep()
+{
+	//soma de correntes 
+}
+
 void FluxoPotencia::resultado()
 {
 	this->inicializar();
+
+
+	this->backwardsweep();
+
+	
 }
 

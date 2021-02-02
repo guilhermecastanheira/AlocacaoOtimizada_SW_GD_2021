@@ -13,10 +13,9 @@ public:
 	Circuito();
 	~Circuito();
 
-	vector<Ramo*>ramolista;
-	vector<Barra*>barralista;
+	vector<Ramo*>ramolista; //monta a lista de ramos em um subsistema
+	vector<Barra*>barralista; //monta um vetor de barras
 
-	Barra* getBarra(int idbrr);
-
+	Barra* getBarra(int idbrr); //localizar o objeto da barra identificada
 };
 

@@ -154,6 +154,7 @@
     <ClInclude Include="SistemaDistribuicao.h" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="NOTAS_REGRAS.txt" />
     <Text Include="sistematesteEX.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
