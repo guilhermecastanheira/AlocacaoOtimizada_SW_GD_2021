@@ -17,6 +17,9 @@ public:
 	vector<vector<Ramo*>>ss; //vetor de subsistemas 
 	vector<Ramo*>interlig; //vetor de interconexao dos alimentadores 
 
+	float perdas_ativas = 0;
+	float valor_fo = 0;
+
 	Circuito* DadosSistema(string arq); //leitura dos dados do sistema
 	
 	void Topologia(Circuito* pc);

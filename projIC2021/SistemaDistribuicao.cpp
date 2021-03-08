@@ -185,6 +185,4 @@ void SistemaDistribuicao::Topologia(Circuito* pc)
             interlig.push_back(pc->ramolista[k]);
         }
     }
-
-
 }

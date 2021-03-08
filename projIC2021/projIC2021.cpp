@@ -23,8 +23,8 @@ int main()
     
 
 
-    FluxoPotencia* pFluxo = new FluxoPotencia(pC, tolerancia_pflow, Vi, Vbase, Sbase);
-    pFluxo->resultado();
+    FluxoPotencia* pFluxo = new FluxoPotencia(pSD, tolerancia_pflow, Vi, Vbase, Sbase);
+    pFluxo->resultado(pSD);
     
     //fazer o fluxo de cargas
 
