@@ -139,23 +139,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Barra.cpp" />
-    <ClCompile Include="Circuito.cpp" />
-    <ClCompile Include="FluxoPotencia.cpp" />
     <ClCompile Include="projIC2021.cpp" />
-    <ClCompile Include="Ramo.cpp" />
-    <ClCompile Include="SistemaDistribuicao.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Barra.h" />
-    <ClInclude Include="Circuito.h" />
-    <ClInclude Include="FluxoPotencia.h" />
-    <ClInclude Include="Ramo.h" />
-    <ClInclude Include="SistemaDistribuicao.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="NOTAS_REGRAS.txt" />
-    <Text Include="sistematesteEX.txt" />
+    <Text Include="dados136.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
