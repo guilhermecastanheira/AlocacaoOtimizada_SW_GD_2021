@@ -12,7 +12,9 @@
 #include <vector>
 #include <algorithm>
 #include <tuple>
-#include "funcoes.h"
+
+
+#include "Funcoes.h"
 
 using namespace std;
 
@@ -133,7 +135,7 @@ public:
 
 	void valores_nominais_tensao();
 	void fluxo_potencia(int referencia);
-	bool condicaoSatisfeita(int barra_referencia);
+	bool condicaoTensaoFluxoPotencia(int barra_referencia);
 
 private:
 
@@ -187,6 +189,7 @@ public:
 	void salva(float potenciaGD[linha_dados], bool localGD[linha_dados], bool localCM[linha_dados]);
 	float calculo(int AL);
 } fo;
+
 //------------------------------------------------------------
 
 void ParametrosSistema::leitura_parametros()
@@ -656,9 +659,11 @@ void FluxoPotencia::fluxo_potencia(int referencia) //alterar conforme o numero d
 
 }
 
-bool FluxoPotencia::condicaoSatisfeita(int barrareferencia)
+bool FluxoPotencia::condicaoTensaoFluxoPotencia(int barrareferencia)
 {
 	bool resultado;
+	int locBarra = 0;
+	float somaPotencia = 0.0;
 
 	//nesta etapa apenas retorna um valor verdadeiro ou falso para simplificar codigos adiante, mas nao passa do calculo do fluxo de potencia
 	fluxo_potencia(barrareferencia);
@@ -666,6 +671,7 @@ bool FluxoPotencia::condicaoSatisfeita(int barrareferencia)
 	//checando condicao
 	resultado = true;
 
+	//checando tensao nas barras
 	for (int i = 1; i < linha_dados; i++)
 	{
 		if (abs(fxp.tensao_pu[i]) < estado_restaurativo_pu)
@@ -691,7 +697,7 @@ void AlocacaoDispositivosRede::sortCMGD(bool cm_gd[linha_dados], int AL, int tip
 		tie(a, b) = localizaSecao(ps.noi, AL, linha_dados);
 
 		//adicionando a chave
-		while (verif == false)
+		while (!verif)
 		{
 			s = rand() % (b - a + 1) + a; //gera um numero entre 'a' e 'b'
 
@@ -700,6 +706,11 @@ void AlocacaoDispositivosRede::sortCMGD(bool cm_gd[linha_dados], int AL, int tip
 				cm_gd[s] = true;
 				verif = true;
 			}
+			else
+			{
+				verif = false;
+			}
+
 		}
 		break;
 
@@ -707,7 +718,7 @@ void AlocacaoDispositivosRede::sortCMGD(bool cm_gd[linha_dados], int AL, int tip
 		tie(a, b) = localizaSecao(ps.noi, AL, linha_dados);
 
 		//adicionando gd
-		while (verif == false)
+		while (!verif)
 		{
 			s = rand() % (b - a + 1) + a; //gera um numero entre 'a' e 'b'
 
@@ -755,6 +766,8 @@ bool OperacaoSistema::analise_operacao(vector<int>secao, int al)
 	bool ok = false;
 	vector<int> posicao;
 	int SEremanejamento = 0;
+	float somaPotencia = 0;
+	int locBarra = 0;
 
 	//CENARIO 1: analisa a secao para ver se tem gd ou alimentador
 	for (int i = 0; i < secao.size(); i++)
@@ -765,12 +778,30 @@ bool OperacaoSistema::analise_operacao(vector<int>secao, int al)
 		{
 			//quer dizer q na secao tem pelo menos um GD ou esta conectado a subestacao, assim, coloca-se este na referencia e faz o fluxo de potencia
 
-			cenario = fxp.condicaoSatisfeita(ps.nof[auxiliar]);
+			cenario = fxp.condicaoTensaoFluxoPotencia(ps.nof[auxiliar]); //retorna verdadeiro
+
+			//checando capacidade de potencia
+			for (int i = 1; i < linha_dados; i++)
+			{
+				for (int j = 1; j < linha_dados; j++)
+				{
+					if (fxp.camadaREF[i][j] != 0)
+					{
+						locBarra = posicaoBarra(fxp.camadaREF[i][j], ps.nof, linha_dados);
+						somaPotencia += ps.s_nofr[locBarra]; //soma a potencia ativa
+					}
+				}
+			}
+
+			if (somaPotencia > dr.cap_barraGD[auxiliar])
+			{
+				cenario = false;
+			}
 
 		}
 		else if (ps.noi[auxiliar] == al)
 		{
-			cenario = fxp.condicaoSatisfeita(ps.noi[auxiliar]);
+			cenario = fxp.condicaoTensaoFluxoPotencia(ps.noi[auxiliar]);
 		}
 
 		if (cenario) {
@@ -788,7 +819,7 @@ bool OperacaoSistema::analise_operacao(vector<int>secao, int al)
 	{
 		ps.estado_swt[posicao[k]] = LIGADO; //fecha a chave
 		SEremanejamento = locSE(ps.noi[posicao[k]], ps.nof[posicao[k]], ps.noi, ps.nof, secao); //localiza oalimentador adjacente
-		cenario = fxp.condicaoSatisfeita(SEremanejamento); //analisa o fluxo de potencia
+		cenario = fxp.condicaoTensaoFluxoPotencia(SEremanejamento); //analisa o fluxo de potencia
 		ps.estado_swt[posicao[k]] = DESLIGADO; //abre a chave
 
 		if (cenario) {
@@ -835,12 +866,16 @@ float FuncaoObjetivo::calculo(int AL)
 		{
 			ad.secoes.push_back(aux);
 			aux.clear();
+			aux.push_back(i);
 		}
 		else
 		{
 			aux.push_back(i);
 		}
 	}
+
+	ad.secoes.push_back(aux);
+	aux.clear();
 
 	//reajustando as potencias para o fluxo de potencia - os gds fazem com que parte da demanda de uma barra seja suprida, assim, se o GD gerar mais energia do que a barra consome, a potencia ativa sera negativa, o que causa uma diminuicao de corrente
 	for (int i = i1; i < i2; i++)
@@ -887,7 +922,10 @@ float FuncaoObjetivo::calculo(int AL)
 
 		voltaEstadoVanila(ps.estado_swt, ps.estado_swt_vanila, linha_dados);
 	}
+
+	return funcaoObjetivo;
 }
+
 
 
 
