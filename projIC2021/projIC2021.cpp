@@ -41,12 +41,12 @@ int alimentadores[num_AL] = { 0, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007 
 
 #define tempo_falha 4 //numero de horas que o sistema fica em estado restaurativo
 #define tempo_isolacao 0.12 //tempo necessario para fazer as manobras em horas
-#define taxa_falhas 0.18 //taxa de falhas por km no ano
+#define taxa_falhas 0.072 //taxa de falhas por km no ano
 
 #define custoKWh 0.17 //custo kWh fonte não renovavel
 #define custoKWhr 0.04 //custo kWh fonte renovavel
 
-#define custoCM 900 //custo de uma chave de manobra
+#define custoCM 800 //custo de uma chave de manobra
 #define custoGD 80000 //custo de um GD despachavel
 
 #define criterio_parada 5 //criterio de parada da metaheuristica
@@ -173,7 +173,7 @@ public:
 	bool remanejamento;
 
 	bool analise_operacao(vector<int> secao, int al);
-	void isolaSecao(vector<int> s);
+	void isolaSecao(vector<int> s, int intervalo1, int intervalo2);
 } os;
 
 class FuncaoObjetivo
@@ -701,7 +701,7 @@ void AlocacaoDispositivosRede::sortCMGD(bool cm_gd[linha_dados], int AL, int tip
 		{
 			s = rand() % (b - a + 1) + a; //gera um numero entre 'a' e 'b'
 
-			if (cm_gd[s] == false && ps.candidato_aloc[s] == 1)
+			if (cm_gd[s] == false && ps.candidato_aloc[s] == 1 && ps.noi[s] != AL)
 			{
 				cm_gd[s] = true;
 				verif = true;
@@ -742,19 +742,26 @@ void AlocacaoDispositivosRede::sortCMGD(bool cm_gd[linha_dados], int AL, int tip
 	}
 }
 
-void OperacaoSistema::isolaSecao(vector<int>s)
+void OperacaoSistema::isolaSecao(vector<int>s, int intervalo1, int intervalo2)
 {
 	//desligando as cheves desta secao
 
 	int posicao = 0;
 
-	for (int i = 0; i < s.size(); i++)
+	for (int i = intervalo1; i <= intervalo2; i++)
 	{
-		posicao = posicaoBarra(s[i], ps.noi, linha_dados);
-
-		if (dr.ramo_cm[posicao])
+		if (dr.ramo_cm[i])
 		{
-			ps.estado_swt[posicao] = DESLIGADO;
+			posicao = posicaoBarra(ps.noi[i], ps.nof, linha_dados);
+
+			for (int k = 0; k < s.size(); k++)
+			{
+				if (posicao == s[k] || i == s[k])
+				{
+					ps.estado_swt[i] = DESLIGADO; //abre a chave
+				}
+			}
+			
 		}
 	}
 }
@@ -780,22 +787,25 @@ bool OperacaoSistema::analise_operacao(vector<int>secao, int al)
 
 			cenario = fxp.condicaoTensaoFluxoPotencia(ps.nof[auxiliar]); //retorna verdadeiro
 
-			//checando capacidade de potencia
-			for (int i = 1; i < linha_dados; i++)
+			if (cenario)
 			{
-				for (int j = 1; j < linha_dados; j++)
+				//checando capacidade de potencia
+				for (int i = 1; i < linha_dados; i++)
 				{
-					if (fxp.camadaREF[i][j] != 0)
+					for (int j = 1; j < linha_dados; j++)
 					{
-						locBarra = posicaoBarra(fxp.camadaREF[i][j], ps.nof, linha_dados);
-						somaPotencia += ps.s_nofr[locBarra]; //soma a potencia ativa
+						if (fxp.camadaREF[i][j] != 0)
+						{
+							locBarra = posicaoBarra(fxp.camadaREF[i][j], ps.nof, linha_dados);
+							somaPotencia += ps.s_nofr[locBarra]; //soma a potencia ativa
+						}
 					}
 				}
-			}
 
-			if (somaPotencia > dr.cap_barraGD[auxiliar])
-			{
-				cenario = false;
+				if (somaPotencia > dr.cap_barraGD[auxiliar])
+				{
+					cenario = false;
+				}
 			}
 
 		}
@@ -860,7 +870,7 @@ float FuncaoObjetivo::calculo(int AL)
 	tie(i1, i2) = localizaSecao(ps.noi, AL, linha_dados); //intervalo do alimentador
 
 	//pegando as posicoes das barras e dividindo as secoes deste alimentador - as secoes sao divididas pelas chaves de  manobra que devem ser desligadas
-	for (int i = i1; i < i2; i++)
+	for (int i = i1; i <= i2; i++)
 	{
 		if (dr.ramo_cm[i])
 		{
@@ -878,7 +888,7 @@ float FuncaoObjetivo::calculo(int AL)
 	aux.clear();
 
 	//reajustando as potencias para o fluxo de potencia - os gds fazem com que parte da demanda de uma barra seja suprida, assim, se o GD gerar mais energia do que a barra consome, a potencia ativa sera negativa, o que causa uma diminuicao de corrente
-	for (int i = i1; i < i2; i++)
+	for (int i = i1; i <= i2; i++)
 	{
 		if (dr.barra_gd[i])
 		{
@@ -893,7 +903,7 @@ float FuncaoObjetivo::calculo(int AL)
 
 	for (int i = 0; i < ad.secoes.size(); i++)
 	{
-		os.isolaSecao(ad.secoes[i]);
+		os.isolaSecao(ad.secoes[i], i1, i2);
 
 		for (int j = 0; j < ad.secoes.size(); j++)
 		{
