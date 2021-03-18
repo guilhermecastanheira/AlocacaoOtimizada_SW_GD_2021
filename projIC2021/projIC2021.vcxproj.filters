@@ -23,9 +23,4 @@
     <Text Include="dados135.txt" />
     <Text Include="NOTAS_REGRAS.txt" />
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Funcoes.h">
-      <Filter>Arquivos de Cabeçalho</Filter>
-    </ClInclude>
-  </ItemGroup>
 </Project>
