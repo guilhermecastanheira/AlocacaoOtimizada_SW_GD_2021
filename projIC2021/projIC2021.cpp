@@ -750,9 +750,21 @@ void OperacaoSistema::isolaSecao(vector<int>s, int intervalo1, int intervalo2)
 
 	for (int i = intervalo1; i <= intervalo2; i++)
 	{
-		if (dr.ramo_cm[i])
+		if (dr.ramo_cm[i]) //checar se tem chave de manobra
 		{
+			//checando barra inicial 
 			posicao = posicaoBarra(ps.noi[i], ps.nof, linha_dados);
+
+			for (int k = 0; k < s.size(); k++)
+			{
+				if (posicao == s[k] || i == s[k])
+				{
+					ps.estado_swt[i] = DESLIGADO; //abre a chave
+				}
+			}
+
+			//checando barra final
+			posicao = posicaoBarra(ps.nof[i], ps.nof, linha_dados);
 
 			for (int k = 0; k < s.size(); k++)
 			{
@@ -779,9 +791,9 @@ bool OperacaoSistema::analise_operacao(vector<int>secao, int al)
 	//CENARIO 1: analisa a secao para ver se tem gd ou alimentador
 	for (int i = 0; i < secao.size(); i++)
 	{
-		auxiliar = posicaoBarra(secao[i], ps.nof, linha_dados); //posicao
+		auxiliar = posicaoBarra(ps.nof[secao[i]], ps.nof, linha_dados); //posicao
 
-		if (dr.barra_gd[auxiliar] == true)
+		if (dr.barra_gd[auxiliar])
 		{
 			//quer dizer q na secao tem pelo menos um GD ou esta conectado a subestacao, assim, coloca-se este na referencia e faz o fluxo de potencia
 
@@ -790,13 +802,13 @@ bool OperacaoSistema::analise_operacao(vector<int>secao, int al)
 			if (cenario)
 			{
 				//checando capacidade de potencia
-				for (int i = 1; i < linha_dados; i++)
+				for (int k = 1; k < linha_dados; k++)
 				{
 					for (int j = 1; j < linha_dados; j++)
 					{
-						if (fxp.camadaREF[i][j] != 0)
+						if (fxp.camadaREF[k][j] != 0)
 						{
-							locBarra = posicaoBarra(fxp.camadaREF[i][j], ps.nof, linha_dados);
+							locBarra = posicaoBarra(fxp.camadaREF[k][j], ps.nof, linha_dados);
 							somaPotencia += ps.s_nofr[locBarra]; //soma a potencia ativa
 						}
 					}
@@ -823,7 +835,7 @@ bool OperacaoSistema::analise_operacao(vector<int>secao, int al)
 	posicao.clear();
 	for (int i = 0; i < secao.size(); i++)
 	{
-		posREMANEJAMENTO(&posicao, secao[i], ps.noi, ps.nof, linha_dados); //procura as posicoes que da pra efetuar oremanejamento nesta secao, testar ate que as condicoes sejam satisfeitas
+		posREMANEJAMENTO(&posicao, ps.nof[secao[i]], ps.noi, ps.nof, linha_dados); //procura as posicoes que da pra efetuar oremanejamento nesta secao, testar ate que as condicoes sejam satisfeitas
 	}
 	for (int k = 0; k < posicao.size(); k++)
 	{
