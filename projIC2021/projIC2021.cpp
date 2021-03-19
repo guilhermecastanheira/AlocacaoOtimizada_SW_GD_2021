@@ -181,11 +181,14 @@ public:
 class AlocacaoGD
 {
 public:
+	
 	int numgd_AL[num_AL] = {}; //numero de gds por alimentador
 	int posicaoGD[num_AL][linha_dados] = {}; //vetor com as posicoes do GD
 	float GDbarra[linha_dados] = {}; //potencia do GD instalada na Barra
 
 	void ajustePOT(complex<float>S[linha_dados], float P[linha_dados], float P_gd[linha_dados]);
+	bool opILHA(int secoesCM[linha_dados][linha_dados], int adjCM[linha_dados][linha_dados], int posGD[linha_dados], int AL);
+
 
 }agd;
 
@@ -1493,9 +1496,14 @@ void AlocacaoGD::ajustePOT(complex<float>S[linha_dados], float P[linha_dados], f
 		if (P_gd[k] != 0)
 		{
 			S[k] = S[k] - (P_gd[k] / sref);
-			P[k] = P[k] - P_gd[k];
+			P[k] = P[k] - (P_gd[k] / 1000);
 		}
 	}
+}
+
+bool AlocacaoGD::opILHA(int secoesCM[linha_dados][linha_dados], int adjCM[linha_dados][linha_dados], int posGD[linha_dados], int AL)
+{
+	
 }
 
 float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
@@ -2172,7 +2180,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 			agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra); //ajusta a potencia para fazer o fluxo de potencia
 
 			//3.1) Operação em Ilha
-
+			
 
 
 			//3.2) A operação em ilha nao é possivel, sendo necessário fazer o remanejamento de cargas
