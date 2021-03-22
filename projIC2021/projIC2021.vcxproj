@@ -142,6 +142,7 @@
     <ClCompile Include="projIC2021.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="cenarios.txt" />
     <Text Include="NOTAS_REGRAS.txt" />
     <Text Include="dados135.txt" />
   </ItemGroup>

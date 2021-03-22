@@ -22,5 +22,6 @@
   <ItemGroup>
     <Text Include="dados135.txt" />
     <Text Include="NOTAS_REGRAS.txt" />
+    <Text Include="cenarios.txt" />
   </ItemGroup>
 </Project>

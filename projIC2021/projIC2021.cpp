@@ -26,7 +26,8 @@ using namespace std;
 #define num_AL 9 //numero de alimentadores +1 por conta do cpp
 #define estado_restaurativo_pu 0.93 //tensao minima no estado restaurativo
 #define capSE 100000000 //potencia maxima de cada alimentador
-#define capGD 100000 //potencia maxima de um GD
+#define capGD 25000 //potencia maxima de um GD
+#define num_c 33 //numeros de cenarios a serem considerados: 32 (+1 para o cpp)
 
 int alimentadores[num_AL] = { 0, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007 }; // alimentadores
 
@@ -45,7 +46,7 @@ int alimentadores[num_AL] = { 0, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007 
 
 #define custokwh_naorenovavel 0.17 //em dolar
 #define custokwh_renovavel 0.05 //em dolar
-#define custoGD 80000 //em dolar - gd
+#define custoGD 20000 //em dolar - gd
 #define custoSW 800 //em dolar - chave de manobra
 
 //Caracteristicas Fluxo de Potencia ------------------------------------
@@ -133,9 +134,12 @@ public:
 	complex <float> corrente_pu[linha_dados] = {};
 	complex <float> tensao_pu[linha_dados] = {};
 
+	float perdasW = 0.0;
+
 	void valores_nominais_tensao();
 
 	void fluxo_potencia();
+	void perdas_ativa();
 
 	void fluxo_potencia_simples(int referencia);
 	bool condicaoTensaoFluxoPotencia(int barra_referencia);
@@ -143,6 +147,7 @@ public:
 private:
 
 	void camadas(int alimentador, int camadaalimentador[linha_dados][linha_dados]);
+	void backward_sweep(int alimentador, int almt, float demanda);
 	void backward_sweep(int alimentador, int almt);
 	void forward_sweep(int alimentador, int alt);
 
@@ -186,8 +191,17 @@ public:
 	int posicaoGD[num_AL][linha_dados] = {}; //vetor com as posicoes do GD
 	float GDbarra[linha_dados] = {}; //potencia do GD instalada na Barra
 
-	void ajustePOT(complex<float>S[linha_dados], float P[linha_dados], float P_gd[linha_dados]);
-	bool opILHA(int secoesCM[linha_dados][linha_dados], int adjCM[linha_dados][linha_dados], int posGD[linha_dados], int AL);
+	bool opILHA(int secoesCM[linha_dados][linha_dados], int adjCM[linha_dados][linha_dados], int posGD[linha_dados], int AL, int secao);
+
+	float cenario_demanda[num_c];
+	float cenario_is[num_c];
+
+	void leituraCenarios();
+	float PotW(float IS);
+
+	void ajustePOT(complex<float> S[linha_dados], float P[linha_dados], float P_gd[linha_dados], float demanda);
+
+	void potenciaGD(float ISpv, float PGD[linha_dados]);
 
 
 }agd;
@@ -307,6 +321,8 @@ void ParametrosSistema::leitura_parametros()
 void ParametrosSistema::somatorio_potencia()
 {
 	//aqui se soma a potencia ativa total, complexa e ativa
+	ps.total_ativa = 0.0;
+	ps.total_complexa = 0.0;
 
 	for (int i = 1; i < linha_dados; i++)
 	{
@@ -637,6 +653,42 @@ void FluxoPotencia::valores_nominais_tensao()
 		cout << abs(fxp.corrente_pu[i] * iref) << "\t";
 		cout << arg(fxp.corrente_pu[i]) * 180 / 3.141592 << "\n";
 		*/
+	}
+}
+
+void FluxoPotencia::perdas_ativa()
+{
+	//perdas ativas no ramo
+
+	complex<float>tensaoAL = fxp.tensao_inicial;
+	complex<float>Vr;
+	complex<float>Ir;
+
+	fxp.perdasW = 0.0;
+
+	for (int i = 1; i < linha_dados; i++)
+	{
+		if (ps.noi[i] > 999)
+		{
+			Vr =  tensaoAL - (fxp.tensao_pu[i] * vref);
+			Ir = (Vr / ps.lt[i]);
+
+			fxp.perdasW += ps.lt_r[i] * pow(abs(Ir), 2);
+		}
+		else
+		{
+			for (int j = 1; j < linha_dados; j++)
+			{
+				if (ps.noi[i] == ps.nof[j])
+				{
+					Vr = fxp.tensao_pu[j] - (fxp.tensao_pu[i] * vref);
+					Ir = (Vr / ps.lt[i]);
+
+					fxp.perdasW += ps.lt_r[i] * pow(abs(Ir), 2);
+				}
+			}
+		}
+		
 	}
 }
 
@@ -1114,6 +1166,7 @@ bool FluxoPotencia::condicaoTensaoFluxoPotencia(int barrareferencia)
 	bool resultado;
 	int locBarra = 0;
 	float somaPotencia = 0.0;
+	float potGDs = 0.0;
 
 	//nesta etapa apenas retorna um valor verdadeiro ou falso para simplificar codigos adiante, mas nao passa do calculo do fluxo de potencia
 	fluxo_potencia_simples(barrareferencia);
@@ -1128,6 +1181,57 @@ bool FluxoPotencia::condicaoTensaoFluxoPotencia(int barrareferencia)
 		{
 			resultado = false;
 		}
+	}
+
+	//checando potencia
+	if (barrareferencia >= 1000)
+	{
+		resultado = true;
+	}
+	else
+	{	
+		potGDs = 0.0;
+		somaPotencia = 0.0;
+
+		//sera somente o GD, ai tem que conferir
+		for (int i = 1; i < linha_dados; i++)
+		{
+			for (int j = 1; j < linha_dados; j++)
+			{
+				if (fxp.camadaREF[i][j] != 0)
+				{
+					for (int k = 1; k < linha_dados; k++)
+					{
+						if (ps.nof[k] == fxp.camadaREF[i][j])
+						{
+							somaPotencia += ps.s_nofr[k];
+						}
+					}
+				}
+			}
+		}
+
+		//somar potencia do gd
+		for (int i = 1; i < linha_dados; i++)
+		{
+			for (int j = 1; j < linha_dados; j++)
+			{
+				if (fxp.camadaREF[i][j] != 0)
+				{
+					for (int k = 1; k < linha_dados; k++)
+					{
+						if (ps.nof[k] == fxp.camadaREF[i][j] && agd.GDbarra[k] != 0)
+						{
+							potGDs += ps.s_nofr[k];
+						}
+					}
+				}
+			}
+		}
+
+		//conferir
+		if (potGDs > somaPotencia) { resultado = true; }
+		else { resultado = false; }
 	}
 
 	return (resultado);
@@ -1489,21 +1593,77 @@ void AlocacaoChaves::volta_chaves_anteriores()
 	}
 }
 
-void AlocacaoGD::ajustePOT(complex<float>S[linha_dados], float P[linha_dados], float P_gd[linha_dados])
+void AlocacaoGD::leituraCenarios()
+{
+	FILE* arqc = fopen("cenarios.txt", "r");
+
+	if (arqc == NULL) { return; }
+	else
+	{
+		for (int i = 1; i < num_c; i++)
+		{
+			fscanf(arqc, "%f%f", &agd.cenario_demanda[i], &agd.cenario_is[i]);
+		}
+	}
+
+	fclose(arqc);
+}
+
+float AlocacaoGD::PotW(float IS)
+{
+	float pv = 0.0;
+
+	pv = (845 * IS) - (2925 * pow(IS, 2)); //equacao da potencia para cada cenario
+
+	return pv;
+}
+
+void AlocacaoGD::ajustePOT(complex<float>S[linha_dados], float P[linha_dados], float P_gd[linha_dados], float demanda)
 {
 	for (int k = 1; k < linha_dados; k++)
 	{
 		if (P_gd[k] != 0)
 		{
-			S[k] = S[k] - (P_gd[k] / sref);
-			P[k] = P[k] - (P_gd[k] / 1000);
+			S[k] = S[k] * demanda;
+			P[k] = P[k] - (P_gd[k] * vref / 1000);
 		}
 	}
 }
 
-bool AlocacaoGD::opILHA(int secoesCM[linha_dados][linha_dados], int adjCM[linha_dados][linha_dados], int posGD[linha_dados], int AL)
+void AlocacaoGD::potenciaGD(float ISpv, float PGD[linha_dados])
 {
-	
+	for (int i = 1; i < linha_dados; i++)
+	{
+		PGD[i] = PotW(ISpv);
+	}
+}
+
+bool AlocacaoGD::opILHA(int secoesCM[linha_dados][linha_dados], int adjCM[linha_dados][linha_dados], int posGD[linha_dados], int AL, int secao)
+{
+	bool operacao = false;
+
+	for (int i = 1; i < linha_dados; i++)
+	{
+		if (i == secao) { continue; }
+
+		for (int k = 1; k < linha_dados; k++)
+		{
+			for (int j = 1; j < linha_dados; j++)
+			{
+				if (ps.noi[j] == AL) //alimentador
+				{
+					operacao = fxp.condicaoTensaoFluxoPotencia(AL);
+				}
+				else if (ps.nof[posGD[j]] == secoesCM[i][k]) //na secao tem GD
+				{
+					operacao = fxp.condicaoTensaoFluxoPotencia(ps.nof[posGD[j]]);
+				}
+				
+			}
+		}
+	}
+
+	return operacao;
 }
 
 float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
@@ -1513,7 +1673,6 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 	float valorFO = 0.0;
 	float chamadaFO = 0.0;
 	float potencia_isolacao = 0.0;
-	float ENSotima = 0.0;
 	float ens = 0.0;
 	float resultado_FO = 0.0;
 
@@ -1570,7 +1729,6 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 		comprimento_secao = 0.0;
 		potencia_W = 0.0;
 		potencia_isolacao = 0.0;
-		ENSotima = 0.0;
 
 		// k = barras da seção j
 
@@ -1583,7 +1741,6 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 				if (ac.secoes_chaves[p_AL][j][k] == ps.nof[y])
 				{
 					comprimento_secao = comprimento_secao + ps.dist_no[y];
-					ENSotima = ENSotima + ps.s_nofr[y];
 				}
 			}
 		}
@@ -1772,56 +1929,83 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 			}
 		}
 
-		//3) Calculo da ENS pelo sistema caso ocorra falha na seção j do alimentador i
-		bool operacaoILHA = false;
+		//3) Calculo da ENS pelo sistema caso ocorra falha na seção j do alimentador i para cada um dos cenarios possiveis em um ano
 
-		agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra); //ajusta a potencia para fazer o fluxo de potencia
-
-		//3.1) Operação em Ilha
-
-
-		//3.2) A operação em ilha nao acontece, sendo necessário fazer o remanejamento de cargas
-		if (!operacaoILHA)
+		for (int i2 = 1; i2 < num_c; i2++)
 		{
-			if (remanej_cargas.size() != 0)
+			bool operacaoILHA = false;
+
+			agd.potenciaGD(agd.cenario_is[i2], agd.GDbarra);
+
+			agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, agd.cenario_demanda[i2]); //ajusta a potencia para fazer o fluxo de potencia
+
+			ps.somatorio_potencia();
+
+			//3.1) Operação em Ilha
+			operacaoILHA = agd.opILHA(ac.secoes_chaves[p_AL], ac.adjacente_chaves[p_AL], agd.posicaoGD[p_AL], alimentadores[p_AL], j);
+
+			//3.2) A operação em ilha nao acontece, sendo necessário fazer o remanejamento de cargas
+			if (!operacaoILHA)
 			{
-				ens = ps.potencia_al[p_AL];
-
-				//somente uma opcao para remanejamento de cada vez
-				for (int a = 0; a < remanej_cargas.size(); a++)
+				if (remanej_cargas.size() != 0)
 				{
-					potencia_W = 0.0;
+					ens = ps.potencia_al[p_AL];
 
-					for (int b = 0; b < remanej_cargas[a].size(); b++)
+					//somente uma opcao para remanejamento de cada vez
+					for (int a = 0; a < remanej_cargas.size(); a++)
 					{
-						//fechando chave da secao
-						for (int k = 1; k < linha_dados; k++)
+						potencia_W = 0.0;
+
+						for (int b = 0; b < remanej_cargas[a].size(); b++)
 						{
-							for (int y = 1; y < linha_dados; y++)
+							//fechando chave da secao
+							for (int k = 1; k < linha_dados; k++)
 							{
-								if (ac.secoes_chaves[p_AL][j][k] == 0 || ac.posicaochaves[p_AL][y] == 0) { continue; }
-								else if (ac.secoes_chaves[p_AL][j][k] == ps.nof[ac.posicaochaves[p_AL][y]] || ac.secoes_chaves[p_AL][j][k] == ps.noi[ac.posicaochaves[p_AL][y]])
+								for (int y = 1; y < linha_dados; y++)
 								{
-									ps.estado_swt[ac.posicaochaves[p_AL][y]] = 0;
+									if (ac.secoes_chaves[p_AL][j][k] == 0 || ac.posicaochaves[p_AL][y] == 0) { continue; }
+									else if (ac.secoes_chaves[p_AL][j][k] == ps.nof[ac.posicaochaves[p_AL][y]] || ac.secoes_chaves[p_AL][j][k] == ps.noi[ac.posicaochaves[p_AL][y]])
+									{
+										ps.estado_swt[ac.posicaochaves[p_AL][y]] = 0;
+									}
+								}
+							}
+
+							//abrindo chave
+							ps.estado_swt[remanej_cargas[a][b]] = 1;
+
+							potencia_W = ac.energia_suprida(p_AL, barras);
+
+							ps.estado_swt[remanej_cargas[a][b]] = 0;
+
+							if (potencia_W != 0) { break; }
+
+						}
+
+						ens = ens - potencia_W;
+					}
+
+					if (ens == ps.potencia_al[p_AL])
+					{
+						//nao tem como fazer manobra, a ENS será os adjacentes da chave
+						ens = 0.0;
+
+						for (int y = 1; y < linha_dados; y++)
+						{
+							for (int h = 1; h < linha_dados; h++)
+							{
+								if (ps.nof[h] == ac.adjacente_chaves[p_AL][j][y])
+								{
+									ens = ens + ps.s_nofr[h];
 								}
 							}
 						}
-
-						//abrindo chave
-						ps.estado_swt[remanej_cargas[a][b]] = 1;
-
-						potencia_W = ac.energia_suprida(p_AL, barras);
-
-						ps.estado_swt[remanej_cargas[a][b]] = 0;
-
-						if (potencia_W != 0) { break; }
-
 					}
 
-					ens = ens - potencia_W;
+					ps.leitura_parametros();
+					fxp.fluxo_potencia();
 				}
-
-				if (ens == ps.potencia_al[p_AL])
+				else
 				{
 					//nao tem como fazer manobra, a ENS será os adjacentes da chave
 					ens = 0.0;
@@ -1836,44 +2020,33 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 							}
 						}
 					}
-				}
 
-				ps.leitura_parametros();
-				fxp.fluxo_potencia();
+					ps.leitura_parametros();
+					fxp.fluxo_potencia();
+				}
 			}
 			else
 			{
-				//nao tem como fazer manobra, a ENS será os adjacentes da chave
-				ens = 0.0;
+				//a operacao em ilha funciona
+				fxp.fluxo_potencia(); //faz o fluxo de potencia para pegar o restante das barras com valor corrigido
 
-				for (int y = 1; y < linha_dados; y++)
-				{
-					for (int h = 1; h < linha_dados; h++)
-					{
-						if (ps.nof[h] == ac.adjacente_chaves[p_AL][j][y])
-						{
-							ens = ens + ps.s_nofr[h];
-						}
-					}
-				}
 
-				ps.leitura_parametros();
-				fxp.fluxo_potencia();
+
 			}
+
+			// 4) chamando a funcao objetivo
+			chamadaFO = 0.0;
+
+			chamadaFO = FO(ens, comprimento_secao, potencia_isolacao);
+
+			valorFO += chamadaFO;
 		}
-		
+
 		analise_remanejamento.clear();
 		remanej_cargas.clear();
 		secao.clear();
 		posicao.clear();
-
-
-		// 4) chamando a funcao objetivo
-		chamadaFO = 0.0;
-
-		chamadaFO = FO(ens, comprimento_secao, potencia_isolacao);
-
-		valorFO += chamadaFO;
+		
 	}
 
 	//zerar vetor barras
@@ -3552,8 +3725,9 @@ inicio_alg:
 	vnd.q_vnd1 = 0;
 	vnd.q_vnd2 = 0;
 
-	//faz a leitura dos parametros do circuito
+	//faz a leitura dos parametros do circuito e dos cenarios
 	ps.leitura_parametros();
+	agd.leituraCenarios();
 
 	//somatorio da potencia total do sistema
 	ps.somatorio_potencia();
