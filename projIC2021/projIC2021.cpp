@@ -656,7 +656,7 @@ void FluxoPotencia::valores_nominais_tensao()
 	}
 }
 
-void FluxoPotencia::perdas_ativa()
+void FluxoPotencia::perdas_ativa(int layer[linha_dados][linha_dados])
 {
 	//perdas ativas no ramo
 
@@ -666,25 +666,55 @@ void FluxoPotencia::perdas_ativa()
 
 	fxp.perdasW = 0.0;
 
-	for (int i = 1; i < linha_dados; i++)
+	for (int i = 1; i < linha_dados; i++) //camada 1
 	{
-		if (ps.noi[i] > 999)
+		for (int j = 1; j < linha_dados; j++)
 		{
-			Vr =  tensaoAL - (fxp.tensao_pu[i] * vref);
-			Ir = (Vr / ps.lt[i]);
-
-			fxp.perdasW += ps.lt_r[i] * pow(abs(Ir), 2);
-		}
-		else
-		{
-			for (int j = 1; j < linha_dados; j++)
+			//
+			for (int k = 2; k < linha_dados; k++) //camada 2
 			{
-				if (ps.noi[i] == ps.nof[j])
+				for (int t = 1; t < linha_dados; t++)
 				{
-					Vr = fxp.tensao_pu[j] - (fxp.tensao_pu[i] * vref);
-					Ir = (Vr / ps.lt[i]);
+					//
+					for (int g = 1; g < linha_dados; g++) //ramos
+					{
+						if (ps.noi[g] == layer[i][j] && ps.nof[g] == layer[k][t])
+						{
+							if (ps.noi[g] > 999)
+							{
+								Vr = tensaoAL - (fxp.tensao_pu[g] * vref);
+								Ir = Vr / ps.lt[g];
+								fxp.perdasW += (ps.lt_r[g] * pow(abs(Ir), 2) / 1000);
+							}
+							else
+							{
+								for (int h = 1; h < linha_dados; h++)
+								{
+									if (ps.nof[h] == ps.noi[g])
+									{
+										Vr = (fxp.tensao_pu[h] * vref) - (fxp.tensao_pu[g] * vref);
+										Ir = Vr / ps.lt[g];
+										fxp.perdasW += (ps.lt_r[g] * pow(abs(Ir), 2) / 1000);
+										break;
+									}
+								}
 
-					fxp.perdasW += ps.lt_r[i] * pow(abs(Ir), 2);
+							}
+						}
+						else if (ps.nof[g] == layer[i][j] && ps.noi[g] == layer[k][t])
+						{
+							for (int h = 1; h < linha_dados; h++)
+							{
+								if (ps.nof[h] == ps.noi[g])
+								{
+									Vr = (fxp.tensao_pu[g] * vref) - (fxp.tensao_pu[h] * vref);
+									Ir = Vr / ps.lt[h];
+									fxp.perdasW += (ps.lt_r[h] * pow(abs(Ir), 2) / 1000);
+									break;
+								}
+							}
+						}
+					}
 				}
 			}
 		}
