@@ -134,12 +134,10 @@ public:
 	complex <float> corrente_pu[linha_dados] = {};
 	complex <float> tensao_pu[linha_dados] = {};
 
-	float perdasW = 0.0;
-
 	void valores_nominais_tensao();
 
 	void fluxo_potencia();
-	void perdas_ativa();
+	float perdas_ativa(int layer[linha_dados][linha_dados]);
 
 	void fluxo_potencia_simples(int referencia);
 	bool condicaoTensaoFluxoPotencia(int barra_referencia);
@@ -656,7 +654,7 @@ void FluxoPotencia::valores_nominais_tensao()
 	}
 }
 
-void FluxoPotencia::perdas_ativa(int layer[linha_dados][linha_dados])
+float FluxoPotencia::perdas_ativa(int layer[linha_dados][linha_dados])
 {
 	//perdas ativas no ramo
 
@@ -664,7 +662,7 @@ void FluxoPotencia::perdas_ativa(int layer[linha_dados][linha_dados])
 	complex<float>Vr;
 	complex<float>Ir;
 
-	fxp.perdasW = 0.0;
+	float perdasW = 0.0;
 
 	for (int i = 1; i < linha_dados; i++) //camada 1
 	{
@@ -684,7 +682,7 @@ void FluxoPotencia::perdas_ativa(int layer[linha_dados][linha_dados])
 							{
 								Vr = tensaoAL - (fxp.tensao_pu[g] * vref);
 								Ir = Vr / ps.lt[g];
-								fxp.perdasW += (ps.lt_r[g] * pow(abs(Ir), 2) / 1000);
+								perdasW += (ps.lt_r[g] * pow(abs(Ir), 2) / 1000);
 							}
 							else
 							{
@@ -694,7 +692,7 @@ void FluxoPotencia::perdas_ativa(int layer[linha_dados][linha_dados])
 									{
 										Vr = (fxp.tensao_pu[h] * vref) - (fxp.tensao_pu[g] * vref);
 										Ir = Vr / ps.lt[g];
-										fxp.perdasW += (ps.lt_r[g] * pow(abs(Ir), 2) / 1000);
+										perdasW += (ps.lt_r[g] * pow(abs(Ir), 2) / 1000);
 										break;
 									}
 								}
@@ -709,7 +707,7 @@ void FluxoPotencia::perdas_ativa(int layer[linha_dados][linha_dados])
 								{
 									Vr = (fxp.tensao_pu[g] * vref) - (fxp.tensao_pu[h] * vref);
 									Ir = Vr / ps.lt[h];
-									fxp.perdasW += (ps.lt_r[h] * pow(abs(Ir), 2) / 1000);
+									perdasW += (ps.lt_r[h] * pow(abs(Ir), 2) / 1000);
 									break;
 								}
 							}
@@ -720,6 +718,9 @@ void FluxoPotencia::perdas_ativa(int layer[linha_dados][linha_dados])
 		}
 		
 	}
+
+
+	return perdasW;
 }
 
 void FluxoPotencia::fluxo_potencia() //alterar conforme o numero de alimentadores, modificando quantas vezes cada funcao eh chamada
@@ -1700,6 +1701,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 {
 	float comprimento_secao = 0.0;
 	float potencia_W = 0.0;
+	float perdas = 0.0;
 	float valorFO = 0.0;
 	float chamadaFO = 0.0;
 	float potencia_isolacao = 0.0;
@@ -2060,8 +2062,14 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 				//a operacao em ilha funciona
 				fxp.fluxo_potencia(); //faz o fluxo de potencia para pegar o restante das barras com valor corrigido
 
+				perdas = fxp.perdas_ativa(fxp.camadaREF);
 
+			}
 
+			//calculo de perdas ativas
+			for (int aa = 1; aa < num_AL; aa++)
+			{
+				perdas = perdas + fxp.perdas_ativa(fxp.camadaAL[aa]);
 			}
 
 			// 4) chamando a funcao objetivo
@@ -2108,6 +2116,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 	float comprimento_secao = 0.0;
 	float potencia_W = 0.0;
 	float valorFO = 0.0;
+	float perdas = 0.0;
 	float chamadaFO = 0.0;
 	float potencia_isolacao = 0.0;
 	float ENSotima = 0.0;
@@ -2376,60 +2385,83 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 			}
 
 
-			//3) Calculo da ENS pelo sistema caso ocorra falha na seção j do alimentador i
+			//3) Calculo da ENS pelo sistema caso ocorra falha na seção j do alimentador i para cada um dos cenarios possiveis em um ano
 
-			bool operacaoILHA = false;
-
-			agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra); //ajusta a potencia para fazer o fluxo de potencia
-
-			//3.1) Operação em Ilha
-			
-
-
-			//3.2) A operação em ilha nao é possivel, sendo necessário fazer o remanejamento de cargas
-			if (!operacaoILHA)
+			for (int i2 = 1; i2 < num_c; i2++)
 			{
-				if (remanej_cargas.size() != 0)
+				bool operacaoILHA = false;
+
+				agd.potenciaGD(agd.cenario_is[i2], agd.GDbarra);
+
+				agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, agd.cenario_demanda[i2]); //ajusta a potencia para fazer o fluxo de potencia
+
+				ps.somatorio_potencia();
+
+				//3.1) Operação em Ilha
+				operacaoILHA = agd.opILHA(ac.secoes_chaves[w], ac.adjacente_chaves[w], agd.posicaoGD[w], alimentadores[w], j);
+
+				//3.2) A operação em ilha nao acontece, sendo necessário fazer o remanejamento de cargas
+				if (!operacaoILHA)
 				{
-					ens = ps.potencia_al[w];
-
-					//somente uma opcao para remanejamento de cada vez, no caso 1, uma chave para remanejamento é aberta de cada vez
-					for (int a = 0; a < remanej_cargas.size(); a++)
+					if (remanej_cargas.size() != 0)
 					{
-						potencia_W = 0.0;
+						ens = ps.potencia_al[w];
 
-						for (int b = 0; b < remanej_cargas[a].size(); b++)
+						//somente uma opcao para remanejamento de cada vez
+						for (int a = 0; a < remanej_cargas.size(); a++)
 						{
-							//abrindo chaves
-							for (int k = 1; k < linha_dados; k++)
+							potencia_W = 0.0;
+
+							for (int b = 0; b < remanej_cargas[a].size(); b++)
 							{
-								for (int y = 1; y < linha_dados; y++)
+								//fechando chave da secao
+								for (int k = 1; k < linha_dados; k++)
 								{
-									if (ac.secoes_chaves[w][j][k] == 0 || ac.posicaochaves[w][y] == 0) { continue; }
-									else if (ac.secoes_chaves[w][j][k] == ps.nof[ac.posicaochaves[w][y]] || ac.secoes_chaves[w][j][k] == ps.noi[ac.posicaochaves[w][y]])
+									for (int y = 1; y < linha_dados; y++)
 									{
-										ps.estado_swt[ac.posicaochaves[w][y]] = 0;
+										if (ac.secoes_chaves[w][j][k] == 0 || ac.posicaochaves[w][y] == 0) { continue; }
+										else if (ac.secoes_chaves[w][j][k] == ps.nof[ac.posicaochaves[w][y]] || ac.secoes_chaves[w][j][k] == ps.noi[ac.posicaochaves[w][y]])
+										{
+											ps.estado_swt[ac.posicaochaves[w][y]] = 0;
+										}
+									}
+								}
+
+								//abrindo chave
+								ps.estado_swt[remanej_cargas[a][b]] = 1;
+
+								potencia_W = ac.energia_suprida(w, barras);
+
+								ps.estado_swt[remanej_cargas[a][b]] = 0;
+
+								if (potencia_W != 0) { break; }
+
+							}
+
+							ens = ens - potencia_W;
+						}
+
+						if (ens == ps.potencia_al[w])
+						{
+							//nao tem como fazer manobra, a ENS será os adjacentes da chave
+							ens = 0.0;
+
+							for (int y = 1; y < linha_dados; y++)
+							{
+								for (int h = 1; h < linha_dados; h++)
+								{
+									if (ps.nof[h] == ac.adjacente_chaves[w][j][y])
+									{
+										ens = ens + ps.s_nofr[h];
 									}
 								}
 							}
-
-							ps.estado_swt[remanej_cargas[a][b]] = 1; //fecha chave remanejamento
-
-							potencia_W = ac.energia_suprida(w, barras);
-
-							ps.estado_swt[remanej_cargas[a][b]] = 0; //abre chave remanejamento
-
-							if (potencia_W != 0)
-							{
-								break;
-							}
-
 						}
 
-						ens = ens - potencia_W;
+						ps.leitura_parametros();
+						fxp.fluxo_potencia();
 					}
-
-					if (ens == ps.potencia_al[w])
+					else
 					{
 						//nao tem como fazer manobra, a ENS será os adjacentes da chave
 						ens = 0.0;
@@ -2444,44 +2476,41 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 								}
 							}
 						}
-					}
 
-					ps.leitura_parametros();
-					fxp.fluxo_potencia();
+						ps.leitura_parametros();
+						fxp.fluxo_potencia();
+					}
 				}
 				else
 				{
-					//nao tem como fazer manobra, a ENS será os adjacentes da chave
-					ens = 0.0;
+					//a operacao em ilha funciona
+					fxp.fluxo_potencia(); //faz o fluxo de potencia para pegar o restante das barras com valor corrigido
 
-					for (int y = 1; y < linha_dados; y++)
-					{
-						for (int h = 1; h < linha_dados; h++)
-						{
-							if (ps.nof[h] == ac.adjacente_chaves[w][j][y])
-							{
-								ens = ens + ps.s_nofr[h];
-							}
-						}
-					}
+					perdas = fxp.perdas_ativa(fxp.camadaREF);
 
-					ps.leitura_parametros();
-					fxp.fluxo_potencia();
 				}
+
+
+				//calculo de perdas ativas
+				for (int aa = 1; aa < num_AL; aa++)
+				{
+					perdas = perdas + fxp.perdas_ativa(fxp.camadaAL[aa]);
+				}
+
+
+				analise_remanejamento.clear();
+				remanej_cargas.clear();
+				secao.clear();
+				posicao.clear();
+
+
+				// 4) chamando a funcao objetivo
+				chamadaFO = 0.0;
+
+				chamadaFO = FO(ens, comprimento_secao, potencia_isolacao);
+
+				valorFO += chamadaFO;
 			}
-
-			analise_remanejamento.clear();
-			remanej_cargas.clear();
-			secao.clear();
-			posicao.clear();
-
-
-			// 4) chamando a funcao objetivo
-			chamadaFO = 0.0;
-
-			chamadaFO = FO(ens, comprimento_secao, potencia_isolacao);
-
-			valorFO += chamadaFO;
 		}
 
 		fo_al[w] = valorFO;
