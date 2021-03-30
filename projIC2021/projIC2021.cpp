@@ -48,7 +48,7 @@ int alimentadores[num_AL] = { 0, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007 
 #define custokwh_renovavel 0.05 //em dolar
 #define custokwh_falta 
 #define custoGD 20000 //em dolar - gd
-#define custoSW 800 //em dolar - chave de manobra
+#define custoSW 1150 //em dolar - chave de manobra com manutenção
 
 //Caracteristicas Fluxo de Potencia ------------------------------------
 
@@ -107,6 +107,9 @@ public:
 	float cenario_demanda[num_c];
 	float cenario_is[num_c];
 	float tempo_cenario[num_c];
+	float custokwh[num_c];
+	float custotaxa_CO2[num_c];
+	float custoENS[num_c];
 
 	float total_ativa = 0;
 	complex <float> total_complexa = complex <float>(float(0.0), float(0.0));
@@ -215,6 +218,15 @@ public:
 
 	float fo_al[num_AL] = {};
 	float fo_al_save[num_AL] = {};
+
+	float investimentoCM = 0.0;
+	float investimentoGD = 0.0;
+	float custoENS = 0.0;
+	float custoPe = 0.0;
+	float custoP = 0.0;
+	float custoEmss = 0.0;
+
+	float eCO2 = 0.92; //taxa de emissao de carbono kgCO2/kWh
 
 	float calculo_funcao_objetivo(int p_AL);
 	float calculo_funcao_objetivo_geral();
@@ -330,7 +342,7 @@ void ParametrosSistema::leituraCenarios()
 	{
 		for (int i = 1; i < num_c; i++)
 		{
-			fscanf(arqc, "%f%f", &ps.cenario_demanda[i], &ps.cenario_is[i]);
+			fscanf(arqc, "%f%f%f%f%f%f", &ps.cenario_demanda[i], &ps.cenario_is[i], &ps.tempo_cenario[i], &ps.custokwh[i], &ps.custotaxa_CO2[i], &ps.custoENS[i]);
 		}
 	}
 
@@ -2588,32 +2600,44 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 					ps.leitura_parametros(); //reseta dados
 				}
 
-				GDp = agd.potenciaALGD(ac.adjacente_chaves[w][1]);
+				//4 custos do cenario
+
+				fo.custoENS += ((taxa_falhas * ens * tempo_falha * ps.custoENS[i2]) + (taxa_falhas * ps.potencia_al * tempo_isolacao * ps.custoENS[i2])) / 8760; //custo energia energia nao suprida
+				fo.custoPe += perdas * ps.tempo_cenario[i2] * ps.custokwh[i2] / 8760; //custo perdas
+				fo.custoP += ps.potencia_al * ps.tempo_cenario[i2] * ps.custokwh[i2] / 8760; //custo potencia comprada pelo alimentador
+				fo.custoEmss += fo.eCO2 * ps.potencia_al * ps.tempo_cenario[i2] * ps.custotaxa_CO2[i2] / 8760; //custo emissao de poluentes
+				
 								
 				analise_remanejamento.clear();
 				remanej_cargas.clear();
 				secao.clear();
 				posicao.clear();
-
-
-				// 4) chamando a funcao objetivo
-				chamadaFO = 0.0;
-				  
-				chamadaFO = FO(ps.potencia_al, comprimento_secao, ens, w, perdas, GDp);
-
-				valorFO += chamadaFO;
 			}
 		}
 
-		fo_al[w] = valorFO;
-		valorFO = 0.0;
+		//Fim dos cenarios
+		fo.investimentoCM = ac.numch_AL[w] * custoSW; //investimento das chaves de manobra
+		fo.investimentoGD = agd.numgd_AL[w] * custoGD; //investimento para colocar o GD no sistema
+
+		fo_al[w] = fo.investimentoCM + fo.investimentoGD + fo.custoP + fo.custoEmss + fo.custoPe + fo.custoENS; //valor da FO para alimentador
+		
+
+		//zerar variaveis para o novo alimentador
+
+		fo.investimentoCM = 0.0;
+		fo.investimentoGD = 0.0;
+		fo.custoENS = 0.0;
+		fo.custoPe = 0.0;
+		fo.custoP = 0.0;
+		fo.custoEmss = 0.0;
+
 		barras.clear();
 	}
 
 	valorFO = 0.0;
 	for (int i = 1; i < num_AL; i++)
 	{
-		valorFO = valorFO + fo_al[i];
+		valorFO = valorFO + fo_al[i]; //soma de todos os alimentadores
 	}
 
 	return valorFO;
@@ -3878,7 +3902,7 @@ inicio_alg:
 
 	//faz a leitura dos parametros do circuito e dos cenarios
 	ps.leitura_parametros();
-	agd.leituraCenarios();
+	ps.leituraCenarios();
 
 	//somatorio da potencia total do sistema
 	ps.somatorio_potencia();
