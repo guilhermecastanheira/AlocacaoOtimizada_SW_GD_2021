@@ -231,7 +231,7 @@ public:
 	float calculo_funcao_objetivo(int p_AL);
 	float calculo_funcao_objetivo_geral();
 
-	float FO(float potenciaAL, float comprimento, float ens, int pal, float perdas, float potGD);
+	float FO(float potenciaAL, float comprimento, float ens);
 }fo;
 
 class GVNS
@@ -1622,16 +1622,11 @@ float AlocacaoChaves::energia_suprida(int AL, vector<int>barras_AL)
 	return energia_sup;
 }
 
-float FuncaoObjetivo::FO(float potenciaAL, float comprimento, float ens, int pal, float perdas, float potGD)
+float FuncaoObjetivo::FO(float potenciaAL, float comprimento, float ens)
 {
 	float resultado = 0.0;
 
-	resultado = 0.0;
-
-	resultado = (ac.numch_AL[pal] * custoSW) + (agd.numgd_AL[pal] * custoGD); //custo equipamentos
-	resultado = resultado + (perdas * custokwh_naorenovavel); //custo de perdas na linha
-	resultado = resultado + (potGD * custokwh_naorenovavel) + (potenciaAL * custokwh_naorenovavel); //custo potencia no alimentador
-	resultado = resultado + (taxa_falhas * custokwh_naorenovavel * comprimento * tempo_falha * ens) + (taxa_falhas * custokwh_naorenovavel * tempo_isolacao * potenciaAL); //custo da energia nao suprida
+	resultado = taxa_falhas * comprimento * ((potenciaAL * tempo_isolacao) + (tempo_falha * ens));
 
 	return resultado;
 }
@@ -2190,14 +2185,12 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 {
 	float comprimento_secao = 0.0;
 	float potencia_W = 0.0;
-	float valorFO = 0.0;
 	float perdas = 0.0;
-	float chamadaFO = 0.0;
 	float potencia_isolacao = 0.0;
 	float ens = 0.0;
-	float ens2 = 0.0;
-	float resultado_FO = 0.0;
-	float GDp = 0.0;
+	float ENSt = 0.0;
+
+
 
 	int contcondicao = 0;
 
@@ -2217,7 +2210,6 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 
 	ac.secoes_alimentador();
 
-	valorFO = 0.0;
 
 	ps.leitura_parametros();
 	fxp.fluxo_potencia();
@@ -2236,252 +2228,253 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 			}
 		}
 
-		//secao j do alimetador w
-		for (int j = 1; j < linha_dados; j++)
+		for (int i2 = 1; i2 < num_c; i2++)
 		{
-			//ver se vale a pena fazer o laço
-			contcondicao = 0;
+			//ajustes para o cenario
+			agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.posicaoGD[w]); //ajusta potencia do GD
 
-			for (int k = 0; k < linha_dados; k++)
+			agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
+
+			ps.somatorio_potencia();
+			ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
+
+			ENSt = 0.0;
+
+			//secao j do alimetador w
+			for (int j = 1; j < linha_dados; j++)
 			{
-				if (ac.secoes_chaves[w][j][k] != 0)
+				//ver se vale a pena fazer o laço
+				contcondicao = 0;
+
+				for (int k = 0; k < linha_dados; k++)
 				{
-					contcondicao++;
-				}
-			}
-
-			if (contcondicao == 0) { continue; }
-
-			//////////////////////
-
-			comprimento_secao = 0.0;
-			potencia_W = 0.0;
-			potencia_isolacao = 0.0;
-
-			// k = barras da seção j
-
-			//analise comprimento e potencia nao suprida
-			for (int k = 1; k < linha_dados; k++)
-			{
-				//comprimento
-				for (int y = 1; y < linha_dados; y++)
-				{
-					if (ac.secoes_chaves[w][j][k] == ps.nof[y])
+					if (ac.secoes_chaves[w][j][k] != 0)
 					{
-						comprimento_secao = comprimento_secao + ps.dist_no[y];
+						contcondicao++;
 					}
 				}
-			}
 
-			// 1) primeiro deve-se pegar toda a area do alimentador e deliga-la
-			for (int k = 1; k < linha_dados; k++)
-			{
-				for (int y = 1; y < linha_dados; y++)
-				{
-					if (ac.adjacente_chaves[w][1][k] == ps.nof[y])
-					{
-						potencia_isolacao = potencia_isolacao + ps.s_nofr[y];
-					}
-				}
-			}
+				if (contcondicao == 0) { continue; }
 
-			// 2) agora deve-se fazer o devido chaveamento ou operacao em ilha 
-		
-			// 2a) isolando secao j abrindo a chave
-			for (int k = 1; k < linha_dados; k++)
-			{
-				for (int y = 1; y < linha_dados; y++)
-				{
-					if (ac.secoes_chaves[w][j][k] == 0 || ac.posicaochaves[w][y] == 0) { continue; }
-					else if (ac.secoes_chaves[w][j][k] == ps.nof[ac.posicaochaves[w][y]] || ac.secoes_chaves[w][j][k] == ps.noi[ac.posicaochaves[w][y]])
-					{
-						ps.estado_swt[ac.posicaochaves[w][y]] = 0;
-					}
-				}
-			}
+				//////////////////////
 
-			if (j == 1) //desligar o disjuntor da subestacao
-			{
+				comprimento_secao = 0.0;
+				potencia_W = 0.0;
+				potencia_isolacao = 0.0;
+
+				// k = barras da seção j
+
+				//analise comprimento e potencia nao suprida
 				for (int k = 1; k < linha_dados; k++)
 				{
-					if (ps.noi[k] == alimentadores[w])
+					//comprimento
+					for (int y = 1; y < linha_dados; y++)
 					{
-						ps.estado_swt[k] = 0;
-					}
-				}
-			}
-
-			// 2b) cenario da falta
-			//zerar falha na camada
-			for (int k = 1; k < linha_dados; k++)
-			{
-				for (int y = 1; y < linha_dados; y++)
-				{
-					for (int t = 1; t < linha_dados; t++)
-					{
-						if (fxp.camadaAL[w][k][y] == ac.secoes_chaves[w][j][t])
+						if (ac.secoes_chaves[w][j][k] == ps.nof[y])
 						{
-							fxp.camadaAL[w][k][y] = 0;
+							comprimento_secao = comprimento_secao + ps.dist_no[y];
 						}
 					}
 				}
-			}
 
-			bool inicio;
-			int cont_nao0;
-
-			inicio = false;
-
-			for (int k = 1; k < linha_dados; k++)
-			{
-				cont_nao0 = 0;
-
-				for (int y = 1; y < linha_dados; y++)
+				// 1) primeiro deve-se pegar toda a area do alimentador e deliga-la
+				for (int k = 1; k < linha_dados; k++)
 				{
-					if (fxp.camadaAL[w][k][y] != 0)
+					for (int y = 1; y < linha_dados; y++)
 					{
-						secao.push_back(fxp.camadaAL[w][k][y]);
-						cont_nao0++;
+						if (ac.adjacente_chaves[w][1][k] == ps.nof[y])
+						{
+							potencia_isolacao = potencia_isolacao + ps.s_nofr[y];
+						}
 					}
 				}
 
-				if (cont_nao0 == 0)
+				// 2) agora deve-se fazer o devido chaveamento ou operacao em ilha 
+
+				// 2a) isolando secao j abrindo a chave
+				for (int k = 1; k < linha_dados; k++)
 				{
-					secao.clear();
-					inicio = true;
-				}
-				else if (inicio == true && secao.size() != 0)
-				{
-					for (int m = 1; m < linha_dados; m++)
+					for (int y = 1; y < linha_dados; y++)
 					{
-						for (int n = 1; n < linha_dados; n++)
+						if (ac.secoes_chaves[w][j][k] == 0 || ac.posicaochaves[w][y] == 0) { continue; }
+						else if (ac.secoes_chaves[w][j][k] == ps.nof[ac.posicaochaves[w][y]] || ac.secoes_chaves[w][j][k] == ps.noi[ac.posicaochaves[w][y]])
+						{
+							ps.estado_swt[ac.posicaochaves[w][y]] = 0;
+						}
+					}
+				}
+
+				if (j == 1) //desligar o disjuntor da subestacao
+				{
+					for (int k = 1; k < linha_dados; k++)
+					{
+						if (ps.noi[k] == alimentadores[w])
+						{
+							ps.estado_swt[k] = 0;
+						}
+					}
+				}
+
+				// 2b) cenario da falta
+				//zerar falha na camada
+				for (int k = 1; k < linha_dados; k++)
+				{
+					for (int y = 1; y < linha_dados; y++)
+					{
+						for (int t = 1; t < linha_dados; t++)
+						{
+							if (fxp.camadaAL[w][k][y] == ac.secoes_chaves[w][j][t])
+							{
+								fxp.camadaAL[w][k][y] = 0;
+							}
+						}
+					}
+				}
+
+				bool inicio;
+				int cont_nao0;
+
+				inicio = false;
+
+				for (int k = 1; k < linha_dados; k++)
+				{
+					cont_nao0 = 0;
+
+					for (int y = 1; y < linha_dados; y++)
+					{
+						if (fxp.camadaAL[w][k][y] != 0)
+						{
+							secao.push_back(fxp.camadaAL[w][k][y]);
+							cont_nao0++;
+						}
+					}
+
+					if (cont_nao0 == 0)
+					{
+						secao.clear();
+						inicio = true;
+					}
+					else if (inicio == true && secao.size() != 0)
+					{
+						for (int m = 1; m < linha_dados; m++)
+						{
+							for (int n = 1; n < linha_dados; n++)
+							{
+								for (int t = 0; t < secao.size(); t++)
+								{
+									if (secao[t] == ac.secoes_chaves[w][m][n])
+									{
+										posicao.push_back(m);
+									}
+								}
+							}
+						}
+
+						secao.clear();
+					}
+					else
+					{
+						secao.clear();
+					}
+				}
+
+				//eliminar elementos iguais no vetor
+				for (int k = 0; k < posicao.size(); k++)
+				{
+					for (int t = 0; t < posicao.size(); t++)
+					{
+						if (t != k && posicao[k] == posicao[t])
+						{
+							posicao[t] = 0;
+						}
+					}
+				}
+
+				//analisando o remanejamento:
+				secao.clear();
+
+				for (int k = 0; k < posicao.size(); k++)
+				{
+					if (posicao[k] == 0) { continue; }
+
+					for (int t = 1; t < linha_dados; t++)
+					{
+						if (ac.adjacente_chaves[w][posicao[k]][t] != 0)
+						{
+							secao.push_back(ac.adjacente_chaves[w][posicao[k]][t]);
+						}
+					}
+
+					//verificar se esta contido na camada
+					bool contbar;
+
+					contbar = false;
+
+					for (int g = 0; g < analise_remanejamento.size(); g++)
+					{
+						for (int h = 0; h < analise_remanejamento[g].size(); h++)
 						{
 							for (int t = 0; t < secao.size(); t++)
 							{
-								if (secao[t] == ac.secoes_chaves[w][m][n])
-								{
-									posicao.push_back(m);
-								}
+								if (analise_remanejamento[g][h] == secao[t]) { contbar = true; }
 							}
 						}
 					}
 
-					secao.clear();
-				}
-				else
-				{
-					secao.clear();
-				}
-			}
-
-			//eliminar elementos iguais no vetor
-			for (int k = 0; k < posicao.size(); k++)
-			{
-				for (int t = 0; t < posicao.size(); t++)
-				{
-					if (t != k && posicao[k] == posicao[t])
+					if (contbar == false)
 					{
-						posicao[t] = 0;
+						analise_remanejamento.push_back(secao);
+						secao.clear();
 					}
-				}
-			}
-
-			//analisando o remanejamento:
-			secao.clear();
-
-			for (int k = 0; k < posicao.size(); k++)
-			{
-				if (posicao[k] == 0) { continue; }
-
-				for (int t = 1; t < linha_dados; t++)
-				{
-					if (ac.adjacente_chaves[w][posicao[k]][t] != 0)
+					else
 					{
-						secao.push_back(ac.adjacente_chaves[w][posicao[k]][t]);
+						secao.clear();
 					}
+
+
 				}
 
-				//verificar se esta contido na camada
-				bool contbar;
+				//pegando posições
+				posicao.clear();
 
-				contbar = false;
-
-				for (int g = 0; g < analise_remanejamento.size(); g++)
+				for (int k = 0; k < analise_remanejamento.size(); k++)
 				{
-					for (int h = 0; h < analise_remanejamento[g].size(); h++)
+					for (int t = 0; t < analise_remanejamento[k].size(); t++)
 					{
-						for (int t = 0; t < secao.size(); t++)
+						for (int y = 1; y < linha_dados; y++)
 						{
-							if (analise_remanejamento[g][h] == secao[t]) { contbar = true; }
+							if (ps.noi[y] == analise_remanejamento[k][t] && ps.candidato_aloc[y] == 0)
+							{
+								posicao.push_back(y);
+							}
+							else if (ps.nof[y] == analise_remanejamento[k][t] && ps.candidato_aloc[y] == 0)
+							{
+								posicao.push_back(y);
+							}
 						}
 					}
-				}
 
-				if (contbar == false)
-				{
-					analise_remanejamento.push_back(secao);
-					secao.clear();
-				}
-				else
-				{
-					secao.clear();
-				}
-
-
-			}
-
-			//pegando posições
-			posicao.clear();
-
-			for (int k = 0; k < analise_remanejamento.size(); k++)
-			{
-				for (int t = 0; t < analise_remanejamento[k].size(); t++)
-				{
-					for (int y = 1; y < linha_dados; y++)
+					if (!posicao.empty())
 					{
-						if (ps.noi[y] == analise_remanejamento[k][t] && ps.candidato_aloc[y] == 0)
-						{
-							posicao.push_back(y);
-						}
-						else if (ps.nof[y] == analise_remanejamento[k][t] && ps.candidato_aloc[y] == 0)
-						{
-							posicao.push_back(y);
-						}
+						remanej_cargas.push_back(posicao);
+						posicao.clear();
 					}
 				}
 
-				if (!posicao.empty())
-				{
-					remanej_cargas.push_back(posicao);
-					posicao.clear();
-				}
-			}
+				ps.leitura_parametros();
+				perdas = 0.0;
 
-			ps.leitura_parametros();
-			perdas = 0.0;
+				//3) Calculo da ENS pelo sistema caso ocorra falha na seção j do alimentador i para cada um dos cenarios possiveis em um ano
 
-			//3) Calculo da ENS pelo sistema caso ocorra falha na seção j do alimentador i para cada um dos cenarios possiveis em um ano
 
-			for (int i2 = 1; i2 < num_c; i2++) // ----- 32 cenarios
-			{
 				bool operacaoILHA = false;
 
-				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.posicaoGD[w]);
-
-				agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
-
-				//fxp.fluxo_potencia();
-
-				//calculo de perdas ativas no sistema vanila com os GD's para a camada
-				perdas = perdas + fxp.perdas_ativa(ac.adjacente_chaves[w][1]);
 				
-				ps.somatorio_potencia();
-				ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
 
 				//3.1) Operação em Ilha - NAO CONSIDERAR
 				//fechando chave da secao
 				/*
-				
+
 				for (int k = 1; k < linha_dados; k++)
 				{
 					for (int y = 1; y < linha_dados; y++)
@@ -2495,10 +2488,10 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 				}
 
 				operacaoILHA = agd.opILHA(ac.secoes_chaves[w], ac.adjacente_chaves[w], agd.posicaoGD[w], alimentadores[w], j);
-				
-				
+
+
 				*/
-				
+
 
 				//3.2) A operação em ilha nao acontece, sendo necessário fazer o remanejamento de cargas
 				if (!operacaoILHA)
@@ -2602,17 +2595,25 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 
 				//4 custos do cenario
 
-				fo.custoENS += ((taxa_falhas * ens * tempo_falha * ps.custoENS[i2]) + (taxa_falhas * ps.potencia_al * tempo_isolacao * ps.custoENS[i2])) / 8760; //custo energia energia nao suprida
-				fo.custoPe += perdas * ps.tempo_cenario[i2] * ps.custokwh[i2] / 8760; //custo perdas
-				fo.custoP += ps.potencia_al * ps.tempo_cenario[i2] * ps.custokwh[i2] / 8760; //custo potencia comprada pelo alimentador
-				fo.custoEmss += fo.eCO2 * ps.potencia_al * ps.tempo_cenario[i2] * ps.custotaxa_CO2[i2] / 8760; //custo emissao de poluentes
-				
-								
+				ENSt = ENSt + FO(potencia_isolacao, comprimento_secao, ens);
+
 				analise_remanejamento.clear();
 				remanej_cargas.clear();
 				secao.clear();
 				posicao.clear();
+
 			}
+
+			perdas = fxp.perdas_ativa(ac.adjacente_chaves[w][1]);
+
+			ps.somatorio_potencia();
+			ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
+
+			fo.custoENS += ENSt * ps.custoENS[i2]; //custo energia energia nao suprida
+			fo.custoPe += perdas * ps.tempo_cenario[i2] * ps.custokwh[i2]; //custo perdas
+			fo.custoP += ps.potencia_al * ps.tempo_cenario[i2] * ps.custokwh[i2]; //custo potencia comprada pelo alimentador
+			fo.custoEmss += fo.eCO2 * (ps.potencia_al + perdas) * ps.tempo_cenario[i2] * ps.custotaxa_CO2[i2]; //custo emissao de poluentes
+
 		}
 
 		//Fim dos cenarios
@@ -2620,7 +2621,6 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 		fo.investimentoGD = agd.numgd_AL[w] * custoGD; //investimento para colocar o GD no sistema
 
 		fo_al[w] = fo.investimentoCM + fo.investimentoGD + fo.custoP + fo.custoEmss + fo.custoPe + fo.custoENS; //valor da FO para alimentador
-		
 
 		//zerar variaveis para o novo alimentador
 
@@ -2634,7 +2634,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 		barras.clear();
 	}
 
-	valorFO = 0.0;
+	float valorFO = 0.0;
 	for (int i = 1; i < num_AL; i++)
 	{
 		valorFO = valorFO + fo_al[i]; //soma de todos os alimentadores
