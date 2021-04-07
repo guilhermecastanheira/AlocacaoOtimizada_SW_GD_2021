@@ -26,7 +26,7 @@ using namespace std;
 #define num_AL 9 //numero de alimentadores +1 por conta do cpp
 #define estado_restaurativo_pu 0.93 //tensao minima no estado restaurativo
 #define capSE 100000000 //potencia maxima de cada alimentador
-#define capGD 25000 //potencia maxima de um GD
+#define maxGD 5 //numero maximo de GD que pode ser instalado na barra
 #define num_c 33 //numeros de cenarios a serem considerados: 32 (+1 para o cpp)
 
 int alimentadores[num_AL] = { 0, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007 }; // alimentadores
@@ -97,6 +97,7 @@ public:
 	float s_nofq[linha_dados] = {}; //potencia complexa do nof img
 
 	int candidato_aloc[linha_dados] = {}; //candidato a alocação de chaves
+	int candidato_GD[linha_dados] = {}; //candidato a alocação de GDs
 	int estado_swt[linha_dados] = {}; //estado da chave
 	int estado_swt_vanila[linha_dados] = {}; //estado das chaves para o sistema vanila
 
@@ -294,7 +295,7 @@ void ParametrosSistema::leitura_parametros()
 
 	for (int i = 1; i < linha_dados; i++)
 	{
-		fscanf(arquivo, "%d%d%f%f%f%f%d%d%f", &ps.noi[i], &ps.nof[i], &ps.lt_r[i], &ps.lt_x[i], &ps.s_nofr[i], &ps.s_nofq[i], &ps.candidato_aloc[i], &ps.estado_swt_vanila[i], &ps.dist_no[i]);
+		fscanf(arquivo, "%d%d%f%f%f%f%d%d%f%d", &ps.noi[i], &ps.nof[i], &ps.lt_r[i], &ps.lt_x[i], &ps.s_nofr[i], &ps.s_nofq[i], &ps.candidato_aloc[i], &ps.estado_swt_vanila[i], &ps.dist_no[i], &ps.candidato_GD[i]);
 	}
 
 	fclose(arquivo);
@@ -2833,8 +2834,6 @@ sorteio:
 	{
 	rand_dnv:
 
-		atribuir = false;
-
 		sort = rand() % aux + 1;
 
 		sort = barras_camada[sort];
@@ -2844,18 +2843,20 @@ sorteio:
 			//localizar posicao
 			for (int j = 1; j < linha_dados; j++)
 			{
-				if (sort == ps.nof[j] && ps.candidato_aloc[j] == 1 && ps.noi[j] != alimentador)
+				if (sort == ps.nof[j] && ps.candidato_GD[j] == 1 && ps.noi[j] != alimentador)
 				{
 					posicao_camada[i] = j;
-					potGD[j] = capGD;
 
-					atribuir = true;
+					if (potGD[j] < maxGD)
+					{
+						potGD[j] = potGD[j]++;
+					}
+					else
+					{
+						goto rand_dnv;
+					}
+					
 				}
-			}
-
-			if (atribuir == false)
-			{
-				goto rand_dnv;
 			}
 		}
 		else
