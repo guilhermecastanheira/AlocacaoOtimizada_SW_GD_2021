@@ -2528,17 +2528,21 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 					}
 				}
 
-				operacaoILHA = agd.opILHA(ac.secoes_chaves[w], ac.adjacente_chaves[w], agd.posicaoGD[w], alimentadores[w], j);
+				if (ps.cenario_is[i2] != 0)
+				{
+					operacaoILHA = agd.opILHA(ac.secoes_chaves[w], ac.adjacente_chaves[w], agd.posicaoGD[w], alimentadores[w], j);
 
-				ps.leitura_parametros();
-				fxp.fluxo_potencia();
-				//ajustes para o cenario
-				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
+					ps.leitura_parametros();
+					fxp.fluxo_potencia();
+					//ajustes para o cenario
+					agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
 
-				agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
+					agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
 
-				ps.somatorio_potencia();
-				ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
+					ps.somatorio_potencia();
+					ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
+				}
+				
 				
 				//3.2) A operação em ilha nao acontece, sendo necessário fazer o remanejamento de cargas
 				if (!operacaoILHA)
@@ -2638,6 +2642,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 				else
 				{
 					//a ens é a soma das potencias da secao somente
+					cout << "opILHA ok" << endl;
 					ens = 0.0;
 
 					for (int y = 1; y < linha_dados; y++)
@@ -2664,7 +2669,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 
 				//4 custos do cenario
 
-				if (ens < 0) { cout << "report error" << endl; }
+				if (ens < 0) { cout << "report error alimentador: " << w << endl; }
 
 				ENSt = ENSt + FO(potencia_isolacao, comprimento_secao, ens);
 
