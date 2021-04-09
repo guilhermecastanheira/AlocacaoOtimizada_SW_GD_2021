@@ -199,7 +199,8 @@ public:
 	
 	int numgd_AL[num_AL] = {}; //numero de gds por alimentador
 	int posicaoGD[num_AL][linha_dados] = {}; //vetor com as posicoes do GD
-	float GDbarra[linha_dados] = {}; //potencia do GD instalada na Barra
+	float GDbarra[linha_dados] = {}; //potencia dos GDs instalada na Barra
+	int quantGD[linha_dados] = {}; //quantidade de gd na barra
 
 	bool opILHA(int secoesCM[linha_dados][linha_dados], int adjCM[linha_dados][linha_dados], int posGD[linha_dados], int AL, int secao);
 
@@ -207,7 +208,7 @@ public:
 
 	void ajustePOT(complex<float> S[linha_dados], float P[linha_dados], float P_gd[linha_dados], float demanda, int posGD[linha_dados]);
 
-	void potenciaGD(float ISpv, float PGD[linha_dados], int posGD[linha_dados]);
+	void potenciaGD(float ISpv, float PGD[linha_dados], int numGDbarra[linha_dados], int posGD[linha_dados]);
 	float potenciaALGD(int secao[linha_dados]);
 
 
@@ -252,7 +253,7 @@ public:
 
 	void primeiraaloc();
 	void sorteiochaves(int numch, int camada[linha_dados][linha_dados], int posicao_camada[linha_dados], int alimentador); //sorteio inicial das chaves
-	void sorteioGDs(int numgd, int camada[linha_dados][linha_dados], int posicao_camada[linha_dados], int alimentador, float potGD[linha_dados]); //sorteio inicial de GDs
+	void sorteioGDs(int numgd, int camada[linha_dados][linha_dados], int posicao_camada[linha_dados], int alimentador, int qntGD[linha_dados]); //sorteio inicial de GDs
 
 }gvns;
 
@@ -1681,13 +1682,13 @@ void AlocacaoGD::ajustePOT(complex<float>S[linha_dados], float P[linha_dados], f
 	}
 }
 
-void AlocacaoGD::potenciaGD(float ISpv, float PGD[linha_dados], int posGD[linha_dados])
+void AlocacaoGD::potenciaGD(float ISpv, float PGD[linha_dados], int numGDbarra[linha_dados], int posGD[linha_dados])
 {
 	for (int i = 1; i < linha_dados; i++)
 	{
 		if (posGD[i] != 0)
 		{
-			PGD[posGD[i]] = PotW(ISpv);
+			PGD[posGD[i]] = numGDbarra[posGD[i]] * PotW(ISpv);
 		}
 	}
 }
@@ -1786,7 +1787,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 	for (int i2 = 1; i2 < num_c; i2++)
 	{
 		//ajustes para o cenario
-		agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.posicaoGD[p_AL]); //ajusta potencia do GD
+		agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
 
 		agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
 
@@ -2043,7 +2044,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 			ps.leitura_parametros();
 			fxp.fluxo_potencia();
 			//ajustes para o cenario
-			agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.posicaoGD[p_AL]); //ajusta potencia do GD
+			agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
 
 			agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
 
@@ -2111,7 +2112,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 					ps.leitura_parametros();
 					fxp.fluxo_potencia();
 					//ajustes para o cenario
-					agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.posicaoGD[p_AL]); //ajusta potencia do GD
+					agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
 
 					agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
 
@@ -2137,7 +2138,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 					ps.leitura_parametros();
 					fxp.fluxo_potencia();
 					//ajustes para o cenario
-					agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.posicaoGD[p_AL]); //ajusta potencia do GD
+					agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
 
 					agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
 
@@ -2164,7 +2165,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 				ps.leitura_parametros(); //reseta dados
 				fxp.fluxo_potencia();
 				//ajustes para o cenario
-				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.posicaoGD[p_AL]); //ajusta potencia do GD
+				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
 
 				agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
 
@@ -2281,15 +2282,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 		}
 
 		for (int i2 = 1; i2 < num_c; i2++)
-		{
-			//ajustes para o cenario
-			agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.posicaoGD[w]); //ajusta potencia do GD
-
-			agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
-
-			ps.somatorio_potencia();
-			ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
-			
+		{		
 			perdas = fxp.perdas_ativa(ac.adjacente_chaves[w][1]);
 
 			ENSt = 0.0;
@@ -2540,7 +2533,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 				ps.leitura_parametros();
 				fxp.fluxo_potencia();
 				//ajustes para o cenario
-				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.posicaoGD[w]); //ajusta potencia do GD
+				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
 
 				agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
 
@@ -2608,7 +2601,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 						ps.leitura_parametros();
 						fxp.fluxo_potencia();
 						//ajustes para o cenario
-						agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.posicaoGD[w]); //ajusta potencia do GD
+						agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
 
 						agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
 
@@ -2634,7 +2627,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 						ps.leitura_parametros();
 						fxp.fluxo_potencia();
 						//ajustes para o cenario
-						agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.posicaoGD[w]); //ajusta potencia do GD
+						agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
 
 						agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
 
@@ -2661,7 +2654,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 					ps.leitura_parametros(); //reseta dados
 					fxp.fluxo_potencia();
 					//ajustes para o cenario
-					agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.posicaoGD[w]); //ajusta potencia do GD
+					agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
 
 					agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
 
@@ -2799,8 +2792,9 @@ sorteio:
 	}
 }
 
-void GVNS::sorteioGDs(int numgd, int camada[linha_dados][linha_dados], int posicao_camada[linha_dados], int alimentador, float potGD[linha_dados])
+void GVNS::sorteioGDs(int numgd, int camada[linha_dados][linha_dados], int posicao_camada[linha_dados], int alimentador, int qntGD[linha_dados])
 {
+	
 	int barras_camada[linha_dados];
 	int aux = 0;
 	int sort = 0;
@@ -2814,7 +2808,7 @@ void GVNS::sorteioGDs(int numgd, int camada[linha_dados][linha_dados], int posic
 	}
 
 	//atribui as barras do alimentador
-	aux = 1;
+	aux = 1; //??????????? mas funciona
 
 	for (int i = 1; i < linha_dados; i++)
 	{
@@ -2829,11 +2823,10 @@ void GVNS::sorteioGDs(int numgd, int camada[linha_dados][linha_dados], int posic
 	}
 
 	//sorteia
-sorteio:
-	for (int i = 1; i <= numgd; i++)
-	{
-	rand_dnv:
+	int i = 1;
 
+	while (i <= numgd)
+	{
 		sort = rand() % aux + 1;
 
 		sort = barras_camada[sort];
@@ -2845,42 +2838,15 @@ sorteio:
 			{
 				if (sort == ps.nof[j] && ps.candidato_GD[j] == 1 && ps.noi[j] != alimentador)
 				{
-					posicao_camada[i] = j;
-
-					if (potGD[j] < maxGD)
+					if (qntGD[j] < maxGD)
 					{
-						potGD[j] = potGD[j]++;
+						posicao_camada[i] = j;
+						qntGD[j] = qntGD[j] + 1;
+						i++;
 					}
-					else
-					{
-						goto rand_dnv;
-					}
-					
 				}
 			}
 		}
-		else
-		{
-			goto rand_dnv;
-		}
-	}
-
-	//analisa se as tres sao diferentes
-	igual = false;
-	for (int i = 1; i < linha_dados; i++)
-	{
-		for (int j = 1; j < linha_dados; j++)
-		{
-			if (posicao_camada[i] == posicao_camada[j] && posicao_camada[i] != 0 && i != j)
-			{
-				igual = true;
-			}
-		}
-	}
-
-	if (igual == true)
-	{
-		goto sorteio;
 	}
 }
 
@@ -2889,7 +2855,7 @@ void GVNS::primeiraaloc() //alterar conforme o numero de alimentadores, modifica
 	for (int i = 1; i < num_AL; i++)
 	{
 		sorteiochaves(ac.numch_AL[i], fxp.camadaAL[i], ac.posicaochaves[i], alimentadores[i]);
-		sorteioGDs(agd.numgd_AL[i], fxp.camadaAL[i], agd.posicaoGD[i], alimentadores[i], agd.GDbarra);
+		sorteioGDs(agd.numgd_AL[i], fxp.camadaAL[i], agd.posicaoGD[i], alimentadores[i], agd.quantGD);
 	}
 }
 
