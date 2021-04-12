@@ -199,10 +199,17 @@ public:
 	
 	int numgd_AL[num_AL] = {}; //numero de gds por alimentador
 	int posicaoGD[num_AL][linha_dados] = {}; //vetor com as posicoes do GD
+	int antGD[num_AL][linha_dados] = {}; //vetor com posicoes do gd anterior
 	float GDbarra[linha_dados] = {}; //potencia dos GDs instalada na Barra
 	int quantGD[linha_dados] = {}; //quantidade de gd na barra
+	int ant_quantGD[linha_dados] = {}; //quantidade anterior de GD na barra
+
 
 	bool opILHA(int secoesCM[linha_dados][linha_dados], int adjCM[linha_dados][linha_dados], int posGD[linha_dados], int AL, int secao);
+
+	void gd_anteriores();
+
+	void volta_gd_anteriores();
 
 	float PotW(float IS);
 
@@ -1661,6 +1668,38 @@ void AlocacaoChaves::volta_chaves_anteriores()
 	}
 }
 
+void AlocacaoGD::gd_anteriores()
+{
+	for (int i = 1; i < num_AL; i++)
+	{
+		for (int j = 1; j < linha_dados; j++)
+		{
+			agd.antGD[i][j] = agd.posicaoGD[i][j];
+		}
+	}
+
+	for (int i = 1; i < linha_dados; i++)
+	{
+		agd.ant_quantGD[i] = agd.quantGD[i];
+	}
+}
+
+void AlocacaoGD::volta_gd_anteriores()
+{
+	for (int i = 1; i < num_AL; i++)
+	{
+		for (int j = 1; j < linha_dados; j++)
+		{
+			agd.posicaoGD[i][j] = agd.antGD[i][j];
+		}
+	}
+
+	for (int i = 1; i < linha_dados; i++)
+	{
+		agd.quantGD[i] = agd.ant_quantGD[i];
+	}
+}
+
 float AlocacaoGD::PotW(float IS)
 {
 	float pv = 0.0;
@@ -1786,14 +1825,6 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 
 	for (int i2 = 1; i2 < num_c; i2++)
 	{
-		//ajustes para o cenario
-		agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
-
-		agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
-
-		ps.somatorio_potencia();
-		ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[p_AL][1]); //toda a potencia do alimentador
-
 		perdas = fxp.perdas_ativa(ac.adjacente_chaves[p_AL][1]);
 
 		ENSt = 0.0;
@@ -2039,17 +2070,32 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 				}
 			}
 
-			operacaoILHA = agd.opILHA(ac.secoes_chaves[p_AL], ac.adjacente_chaves[p_AL], agd.posicaoGD[p_AL], alimentadores[p_AL], j);
+			if (ps.cenario_is[i2] != 0)
+			{
+				operacaoILHA = agd.opILHA(ac.secoes_chaves[p_AL], ac.adjacente_chaves[p_AL], agd.posicaoGD[p_AL], alimentadores[p_AL], j);
 
-			ps.leitura_parametros();
-			fxp.fluxo_potencia();
-			//ajustes para o cenario
-			agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
+				ps.leitura_parametros();
+				fxp.fluxo_potencia();
+				//ajustes para o cenario
+				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
 
-			agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
+				agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
 
-			ps.somatorio_potencia();
-			ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[p_AL][1]); //toda a potencia do alimentador
+				ps.somatorio_potencia();
+				ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[p_AL][1]); //toda a potencia do alimentador
+			}
+			else
+			{
+				ps.leitura_parametros();
+				fxp.fluxo_potencia();
+				//ajustes para o cenario
+				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
+
+				agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
+
+				ps.somatorio_potencia();
+				ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[p_AL][1]); //toda a potencia do alimentador
+			}
 
 			//3.2) A operação em ilha nao acontece, sendo necessário fazer o remanejamento de cargas
 			if (!operacaoILHA)
@@ -2122,6 +2168,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 				else
 				{
 					//nao tem como fazer manobra, a ENS será os adjacentes da chave
+
 					ens = 0.0;
 
 					for (int y = 1; y < linha_dados; y++)
@@ -2134,6 +2181,12 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 							}
 						}
 					}
+
+					if (ens < 0)
+					{
+						ens = 0;
+
+					} //funciona ilhado
 
 					ps.leitura_parametros();
 					fxp.fluxo_potencia();
@@ -2148,7 +2201,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 			}
 			else
 			{
-				//a ens é a soma das potencias da secao somente
+			//a ens é a soma das potencias da secao somente
 				ens = 0.0;
 
 				for (int y = 1; y < linha_dados; y++)
@@ -2161,6 +2214,12 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 						}
 					}
 				}
+
+				if (ens < 0 )
+				{
+					ens = 0;
+				}
+
 
 				ps.leitura_parametros(); //reseta dados
 				fxp.fluxo_potencia();
@@ -2514,24 +2573,37 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 				
 				
 				//3.1) Operação em Ilha - NAO CONSIDERAR
-				//fechando chave da secao
-
-				for (int k = 1; k < linha_dados; k++)
-				{
-					for (int y = 1; y < linha_dados; y++)
-					{
-						if (ac.secoes_chaves[w][j][k] == 0 || ac.posicaochaves[w][y] == 0) { continue; }
-						else if (ac.secoes_chaves[w][j][k] == ps.nof[ac.posicaochaves[w][y]] || ac.secoes_chaves[w][j][k] == ps.noi[ac.posicaochaves[w][y]])
-						{
-							ps.estado_swt[ac.posicaochaves[w][y]] = 0;
-						}
-					}
-				}
-
 				if (ps.cenario_is[i2] != 0)
 				{
+					//fechando chave da secao
+
+					for (int k = 1; k < linha_dados; k++)
+					{
+						for (int y = 1; y < linha_dados; y++)
+						{
+							if (ac.secoes_chaves[w][j][k] == 0 || ac.posicaochaves[w][y] == 0) { continue; }
+							else if (ac.secoes_chaves[w][j][k] == ps.nof[ac.posicaochaves[w][y]] || ac.secoes_chaves[w][j][k] == ps.noi[ac.posicaochaves[w][y]])
+							{
+								ps.estado_swt[ac.posicaochaves[w][y]] = 0;
+							}
+						}
+					}
+
+				
 					operacaoILHA = agd.opILHA(ac.secoes_chaves[w], ac.adjacente_chaves[w], agd.posicaoGD[w], alimentadores[w], j);
 
+					ps.leitura_parametros();
+					fxp.fluxo_potencia();
+					//ajustes para o cenario
+					agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
+
+					agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
+
+					ps.somatorio_potencia();
+					ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
+				}
+				else
+				{
 					ps.leitura_parametros();
 					fxp.fluxo_potencia();
 					//ajustes para o cenario
@@ -2549,6 +2621,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 				{
 					if (remanej_cargas.size() != 0)
 					{
+						cout << "remanej ok" << endl;
 						ens = ps.potencia_al;
 
 						//somente uma opcao para remanejamento de cada vez
@@ -2615,6 +2688,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 					else
 					{
 						//nao tem como fazer manobra, a ENS será os adjacentes da chave
+						cout << "sem remanje" << endl;
 						ens = 0.0;
 
 						for (int y = 1; y < linha_dados; y++)
@@ -2627,6 +2701,13 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 								}
 							}
 						}
+
+						if (ens < 0)
+						{ 
+							ens = 0; 
+
+						} //funciona ilhado
+
 
 						ps.leitura_parametros();
 						fxp.fluxo_potencia();
@@ -2656,6 +2737,11 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 						}
 					}
 
+					if (ens < 0)
+					{
+						ens = 0;
+					}
+
 					ps.leitura_parametros(); //reseta dados
 					fxp.fluxo_potencia();
 					//ajustes para o cenario
@@ -2669,7 +2755,12 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 
 				//4 custos do cenario
 
-				if (ens < 0) { cout << "report error alimentador: " << w << endl; }
+				if (ens < 0) { 
+					
+					
+					cout << "report error - alimentador: " << w << endl;
+				
+				}
 
 				ENSt = ENSt + FO(potencia_isolacao, comprimento_secao, ens);
 
@@ -2677,6 +2768,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 				remanej_cargas.clear();
 				secao.clear();
 				posicao.clear();
+
 
 			}
 
@@ -3920,6 +4012,7 @@ float RVNS::v4_RVNS(float incumbentmainv4)
 
 int main()
 {
+
 	srand(static_cast <unsigned int> (time(NULL)));	//faz a aleatoriedade com base no relogio
 	//srand(time(NULL));
 
@@ -4018,8 +4111,12 @@ inicio_alg:
 	//calcular valor da FO total
 
 	incumbent_solution = fo.calculo_funcao_objetivo_geral();
+	cout << "---------------------------------" << endl;
+
+
 
 	ac.chaves_anteriores();
+	agd.gd_anteriores();
 
 	current_solution = incumbent_solution;
 
