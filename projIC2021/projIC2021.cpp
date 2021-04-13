@@ -3560,6 +3560,21 @@ float VND::v2_VND(int ch2, float incumbentv2)
 
 }
 
+float VND::v1_VNDGD()
+{
+
+}
+
+float VND::v2_VNDGD()
+{
+
+}
+
+float VND::VNDGD()
+{
+
+}
+
 float VND::VND_intensificacao(int ch, float sol_incumbent)
 {
 	//O VND tem o objetivo de intensificar a busca do algoritmo
