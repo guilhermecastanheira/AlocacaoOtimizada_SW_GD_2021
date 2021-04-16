@@ -203,6 +203,7 @@ public:
 	float GDbarra[linha_dados] = {}; //potencia dos GDs instalada na Barra
 	int quantGD[linha_dados] = {}; //quantidade de gd na barra
 	int ant_quantGD[linha_dados] = {}; //quantidade anterior de GD na barra
+	int qntGD_SIS = 0; //total de GDs no sistema
 
 
 	bool opILHA(int secoesCM[linha_dados][linha_dados], int adjCM[linha_dados][linha_dados], int posGD[linha_dados], int AL, int secao);
@@ -286,9 +287,13 @@ public:
 	int q_vnd1 = 0;
 	int q_vnd2 = 0;
 
-	float VND_intensificacao(int ch, float sol_incumbent);
+	float VND_intensificacao(int ch, int gd, float sol_incumbent);
 	float v1_VND(int ch1, float incumbentv1); //mover para adjacente
 	float v2_VND(int ch2, float incumbentv2); //mover para adjacente do adjacente
+
+	float v3_VND(int GD1, float incumbentv3);
+
+	float v4_VND(int GD2, float incumbentv4);
 
 }vnd;
 
@@ -3560,22 +3565,54 @@ float VND::v2_VND(int ch2, float incumbentv2)
 
 }
 
-float VND::v1_VNDGD()
+float VND::v3_VND(int GD1, float incumbentv3)
+{
+	int cont = 0; //contador
+	int gd = 0; //o gd que vai mudar
+	int p_al = 0; //posicao do alimentador
+	vector<int>vgd = {}; //vetor posicao de GDs
+
+	for (int i = 1; i < num_AL; i++)
+	{
+		for (int j = 1; j < linha_dados; j++)
+		{
+			if (agd.posicaoGD[i][j] != 0)
+			{
+				cont++;
+
+				if (cont == GD1)
+				{
+					//selecionar GD
+					gd = j;
+					p_al = i;
+
+					//pegar o vetor onde pode ser alocado GD
+					vgd.clear();
+					for (int k = 1; k < linha_dados; k++)
+					{
+						if(ps.noi[k] < alimentadores[i])
+						{
+							continue;
+						}
+						if else()
+						vgd.push_back(agd.posicaoGD[i][k]);
+					}
+
+					break;
+				}
+			}
+		}
+	}
+
+	//deslocar
+}
+
+float VND::v4_VND(int GD2, float incumbentv4)
 {
 
 }
 
-float VND::v2_VNDGD()
-{
-
-}
-
-float VND::VNDGD()
-{
-
-}
-
-float VND::VND_intensificacao(int ch, float sol_incumbent)
+float VND::VND_intensificacao(int ch, int gd, float sol_incumbent)
 {
 	//O VND tem o objetivo de intensificar a busca do algoritmo
 
@@ -3611,24 +3648,53 @@ inicioVND:
 		goto inicioVND;
 	}
 
+	vnd_current = v3_VND(gd, vnd_incumbent);
+
+	if (vnd_current < vnd_incumbent)
+	{
+		vnd_incumbent = vnd_current;
+		q_vnd2++;
+
+		//cout << "_ 3-VND: " << vnd_incumbent << endl;
+
+		goto inicioVND;
+	}
+
+	vnd_current = v4_VND(gd, vnd_incumbent);
+
+	if (vnd_current < vnd_incumbent)
+	{
+		vnd_incumbent = vnd_current;
+		q_vnd2++;
+
+		//cout << "_ 4-VND: " << vnd_incumbent << endl;
+
+		goto inicioVND;
+	}
+
 	//fim vnd
 	return vnd_incumbent;
 }
 
 float RVNS::v1_RVNS(float incumbentmainv1)
 {
-	//DESCRICAO: selecionar 4 chaves aleatorias do sistema e fazer o VND para estas chaves
+	//DESCRICAO: selecionar 'n' chaves aleatorias do sistema e 'n' GDs e fazer o VND
 
-	int ch = 0;
+	int qch = 0;
+	int qgd = 0;
 	float incumbentv1 = 0.0;
 	float resultadov1 = 0.0;
 
 	incumbentv1 = incumbentmainv1;
 
+	//sorteios 
+	qch = rand() % ac.numch_SIS + 1;
+
+
 
 	for (int i = 1; i < 5; i++)
 	{
-		ch = rand() % ac.numch_SIS + 1;
+		ch = 
 
 		resultadov1 = vnd.VND_intensificacao(ch, incumbentv1);
 
@@ -4103,6 +4169,16 @@ inicio_alg:
 			{
 				ac.numch_SIS++;
 			}
+		}
+	}
+
+	//contando total de GDs no sistema
+	agd.qntGD_SIS = 0;
+	for (int i = 1; i < linha_dados; i++)
+	{
+		if (agd.quantGD[i] != 0)
+		{
+			agd.qntGD_SIS++;
 		}
 	}
 
