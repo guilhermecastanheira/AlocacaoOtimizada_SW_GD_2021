@@ -2286,6 +2286,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 	{
 		ac.volta_chaves_anteriores();
 		ac.secoes_alimentador();
+		agd.volta_gd_anteriores();
 	}
 
 	//calculo F0 geral
@@ -3574,6 +3575,8 @@ float VND::v3_VND(int GD1, float incumbentv3)
 	int pos_antGD = 0;
 	int pos_dpsGD = 0;
 
+	float parcialAL = 0.0;
+
 	for (int i = 1; i < num_AL; i++)
 	{
 		for (int j = 1; j < linha_dados; j++)
@@ -3597,7 +3600,7 @@ float VND::v3_VND(int GD1, float incumbentv3)
 						{
 							continue;
 						}
-						else if (ps.noi[k] > alimentadores[i])
+						else if (ps.noi[k] >= alimentadores[i])
 						{
 							break;
 						}
@@ -3639,17 +3642,28 @@ float VND::v3_VND(int GD1, float incumbentv3)
 
 	if (escolha == 0)
 	{
-		//mover 1 GD para a posicao anterior
+		agd.gd_anteriores(); //salvar posicoes do ultimo GD
 
+		//mover 1 GD para a posicao anterior
+		agd.quantGD[gd] = agd.quantGD[gd] - 1; //tirei um gd
+		agd.quantGD[pos_antGD] = agd.quantGD[pos_antGD] + 1; //aumenta 1 gd
 		
+		parcialAL = fo.calculo_funcao_objetivo(gd_al);
 	}
 	else
 	{
 		//escolha é 1
+		agd.gd_anteriores(); //salvar posicoes do ultimo GD
+
+		//mover 1 GD para a posicao anterior
+		agd.quantGD[gd] = agd.quantGD[gd] - 1; //tirei um gd
+		agd.quantGD[pos_dpsGD] = agd.quantGD[pos_dpsGD] + 1; //aumenta 1 gd
+
+		parcialAL = fo.calculo_funcao_objetivo(gd_al);
 
 	}
 	
-
+	return parcialAL;
 }
 
 float VND::v4_VND(int GD2, float incumbentv4)
