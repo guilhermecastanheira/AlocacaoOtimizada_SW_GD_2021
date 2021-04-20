@@ -3569,8 +3569,10 @@ float VND::v3_VND(int GD1, float incumbentv3)
 {
 	int cont = 0; //contador
 	int gd = 0; //o gd que vai mudar
-	int p_al = 0; //posicao do alimentador
+	int gd_al = 0; //alimentador do GD
 	vector<int>vgd = {}; //vetor posicao de GDs
+	int pos_antGD = 0;
+	int pos_dpsGD = 0;
 
 	for (int i = 1; i < num_AL; i++)
 	{
@@ -3584,18 +3586,27 @@ float VND::v3_VND(int GD1, float incumbentv3)
 				{
 					//selecionar GD
 					gd = j;
-					p_al = i;
+					gd_al = i;
 
 					//pegar o vetor onde pode ser alocado GD
 					vgd.clear();
 					for (int k = 1; k < linha_dados; k++)
 					{
+						//chave condicional para pegar somente no intervalo necessario
 						if(ps.noi[k] < alimentadores[i])
 						{
 							continue;
 						}
-						if else()
-						vgd.push_back(agd.posicaoGD[i][k]);
+						else if (ps.noi[k] > alimentadores[i])
+						{
+							break;
+						}
+						
+						if (ps.candidato_GD[k] == 1)
+						{
+							vgd.push_back(k); //todas as posicoes onde é possivel alocar GD estao aqui
+						}
+						
 					}
 
 					break;
@@ -3604,7 +3615,41 @@ float VND::v3_VND(int GD1, float incumbentv3)
 		}
 	}
 
-	//deslocar
+	//deslocar GD para o vizinho dos vetores
+	for (int k = 0; k < vgd.size(); k++)
+	{
+		if (gd == vgd[k])
+		{
+			// -- possibilidades de alocacao
+			
+			if (k - 1 > -1) //limite inferior
+			{
+				pos_antGD = vgd[k - 1]; //posicao anterior  
+			}
+			if (k + 1 < vgd.size() + 1) //limite superior
+			{
+				pos_dpsGD = vgd[k + 1]; //posicao posterior 
+			}
+		}
+	}
+
+	//com as possibilidades de alocacao para o vizinho colocar o GD
+	int escolha = 0;
+	escolha = rand() % 2; //soteia 0 ou 1
+
+	if (escolha == 0)
+	{
+		//mover 1 GD para a posicao anterior
+
+		
+	}
+	else
+	{
+		//escolha é 1
+
+	}
+	
+
 }
 
 float VND::v4_VND(int GD2, float incumbentv4)
