@@ -3741,6 +3741,7 @@ float RVNS::v1_RVNS(float incumbentmainv1)
 
 	int qch = 0;
 	int qgd = 0;
+	int menor = 0;
 	float incumbentv1 = 0.0;
 	float resultadov1 = 0.0;
 
@@ -3748,14 +3749,25 @@ float RVNS::v1_RVNS(float incumbentmainv1)
 
 	//sorteios 
 	qch = rand() % ac.numch_SIS + 1;
+	qgd = rand() % agd.qntGD_SIS + 1;
 
-
-
-	for (int i = 1; i < 5; i++)
+	//ver menor,
+	if (qch <= qgd)
 	{
-		ch = 
+		menor = qch;
+	}
+	else
+	{
+		menor = qgd;
+	}
 
-		resultadov1 = vnd.VND_intensificacao(ch, incumbentv1);
+	//sorteando
+	for (int i = 1; i < menor; i++)
+	{
+		qch = rand() % ac.numch_SIS + 1;
+		qgd = rand() % agd.qntGD_SIS + 1;
+
+		resultadov1 = vnd.VND_intensificacao(qch, qgd, incumbentv1);
 
 		if (resultadov1 < incumbentv1)
 		{
@@ -3768,14 +3780,16 @@ float RVNS::v1_RVNS(float incumbentmainv1)
 
 float RVNS::v2_RVNS(float incumbentmainv2)
 {
-	//DESCRICAO: sorteia dois alimentadores e faz VND em suas chaves
+	//DESCRICAO: sorteia dois alimentadores e faz VND em suas chaves e gds
 
 	float resultadov2 = 0.0;
 	float incumbentv2 = 0.0;
 	int al1 = 0;
 	int al2 = 0;
 	int cont2 = 0;
+	int cont = 0;
 	vector<int>ch2 = {};
+	vector<int>gd2 = {};
 
 	al1 = al2 = 0;
 	while (al1 == al2)
@@ -3786,6 +3800,7 @@ float RVNS::v2_RVNS(float incumbentmainv2)
 
 	//identificando chaves
 	cont2 = 0;
+	cont = 0;
 	for (int i = 1; i < num_AL; i++)
 	{
 		for (int j = 1; j < linha_dados; j++)
@@ -3799,15 +3814,49 @@ float RVNS::v2_RVNS(float incumbentmainv2)
 					ch2.push_back(cont2);
 				}
 			}
+
+			if (agd.posicaoGD[i][j] != 0)
+			{
+				cont++;
+
+				if (al1 == i || al2 == i)
+				{
+					gd2.push_back(cont2);
+				}
+			}
+
 		}
 	}
 
+	//pegando o menor tamanho para fazer no for
+	if (ch2.size() > gd2.size()) //maior
+	{
+		int apagar = ch2.size() - gd2.size();
+
+		for (int o = 0; o < apagar; o++)
+		{
+			int ap = rand() % apagar;
+			ch2.erase(ch2.begin() + ap);
+		}
+	}
+	else if (ch2.size() < gd2.size()) //menor
+	{
+		int apagar = gd2.size() - ch2.size();
+
+		for (int o = 0; o < apagar; o++)
+		{
+			int ap = rand() % apagar;
+			gd2.erase(gd2.begin() + ap);
+		}
+	}
+	//Nota: ambos vetores podem ter o mesmo tamanho, mas whatever, se nao tiver as condicionais deixam com o msm tamanho
+	
 	//fazendo o VND nessas chaves dos alimentadores
 	incumbentv2 = incumbentmainv2;
 
 	for (int i = 0; i < ch2.size(); i++)
 	{
-		resultadov2 = vnd.VND_intensificacao(ch2[i], incumbentv2);
+		resultadov2 = vnd.VND_intensificacao(ch2[i], gd2[i], incumbentv2);
 
 		if (resultadov2 < incumbentv2)
 		{
@@ -3816,6 +3865,7 @@ float RVNS::v2_RVNS(float incumbentmainv2)
 	}
 
 	ch2.clear();
+	gd2.clear();
 
 	return incumbentv2;
 }
