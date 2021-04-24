@@ -3668,6 +3668,55 @@ float VND::v3_VND(int GD1, float incumbentv3)
 
 float VND::v4_VND(int GD2, float incumbentv4)
 {
+	//tirar todos os GDs de uma barra e colocar no adjacente
+	vector<int>vgd = {};
+	int gd = 0;
+	int gd_al = 0;
+	int cont = 0;
+
+	for (int i = 1; i < num_AL; i++)
+	{
+		for (int j = 1; j < linha_dados; j++)
+		{
+			if (agd.posicaoGD[i][j] != 0)
+			{
+				cont++;
+
+				if (cont == GD2)
+				{
+					//selecionar GD
+					gd = j;
+					gd_al = i;
+
+					//pegar o vetor onde pode ser alocado GD£
+					vgd.clear();
+					for (int k = 1; k < linha_dados; k++)
+					{
+						//chave condicional para pegar somente no intervalo necessario
+						if (ps.noi[k] < alimentadores[i])
+						{
+							continue;
+						}
+						else if (ps.noi[k] >= alimentadores[i])
+						{
+							break;
+						}
+
+						if (ps.candidato_GD[k] == 1)
+						{
+							vgd.push_back(k); //todas as posicoes onde é possivel alocar GD estao aqui
+						}
+
+					}
+
+					break;
+				}
+			}
+		}
+	}
+
+	//com as possibilidades de alocação dos GDs
+
 
 }
 
