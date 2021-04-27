@@ -3668,7 +3668,7 @@ float VND::v3_VND(int GD1, float incumbentv3)
 
 float VND::v4_VND(int GD2, float incumbentv4)
 {
-	//tirar todos os GDs de uma barra e colocar no adjacente
+	//tirar todos os GDs de uma barra e colocar espalhados
 	vector<int>vgd = {};
 	int gd = 0;
 	int gd_al = 0;
@@ -3715,7 +3715,19 @@ float VND::v4_VND(int GD2, float incumbentv4)
 		}
 	}
 
-	//com as possibilidades de alocação dos GDs
+	//com as possibilidades de alocação dos GDs fazer a distribuição dos GDs
+	int aleat = 0;
+
+	agd.gd_anteriores();
+
+	for (int d = 1; d < agd.quantGD[gd]; d++)
+	{
+		aleat = rand() % vgd.size();
+
+
+
+	}
+	
 
 
 }
