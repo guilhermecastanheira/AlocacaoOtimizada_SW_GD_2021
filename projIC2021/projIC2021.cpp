@@ -3588,8 +3588,10 @@ float VND::v3_VND(int GD1, float incumbentv3)
 				if (cont == GD1)
 				{
 					//selecionar GD
-					gd = j;
+					gd = agd.posicaoGD[i][j];
 					gd_al = i;
+
+					bool start = false;
 
 					//pegar o vetor onde pode ser alocado GD
 					vgd.clear();
@@ -3598,14 +3600,21 @@ float VND::v3_VND(int GD1, float incumbentv3)
 						//chave condicional para pegar somente no intervalo necessario
 						if(ps.noi[k] < alimentadores[i])
 						{
-							continue;
+							start = false;
+							continue;	
 						}
-						else if (ps.noi[k] >= alimentadores[i])
+						else if (ps.noi[k] > alimentadores[i])
 						{
+							start = false;
 							break;
 						}
+						else
+						{
+							start = true;
+						}
 						
-						if (ps.candidato_GD[k] == 1)
+
+						if (ps.candidato_GD[k] == 1 && start == true)
 						{
 							vgd.push_back(k); //todas as posicoes onde é possivel alocar GD estao aqui
 						}
@@ -3685,8 +3694,10 @@ float VND::v4_VND(int GD2, float incumbentv4)
 				if (cont == GD2)
 				{
 					//selecionar GD
-					gd = j;
+					gd = agd.posicaoGD[i][j];
 					gd_al = i;
+
+					bool start = false;
 
 					//pegar o vetor onde pode ser alocado GD£
 					vgd.clear();
@@ -3695,14 +3706,20 @@ float VND::v4_VND(int GD2, float incumbentv4)
 						//chave condicional para pegar somente no intervalo necessario
 						if (ps.noi[k] < alimentadores[i])
 						{
+							start = false;
 							continue;
 						}
-						else if (ps.noi[k] >= alimentadores[i])
+						else if (ps.noi[k] > alimentadores[i])
 						{
+							start = false;
 							break;
 						}
+						else
+						{
+							start = true;
+						}
 
-						if (ps.candidato_GD[k] == 1)
+						if (ps.candidato_GD[k] == 1 && start == true)
 						{
 							vgd.push_back(k); //todas as posicoes onde é possivel alocar GD estao aqui
 						}
@@ -3717,17 +3734,24 @@ float VND::v4_VND(int GD2, float incumbentv4)
 
 	//com as possibilidades de alocação dos GDs fazer a distribuição dos GDs
 	int aleat = 0;
+	int gds_pos = 0;
+
+	gds_pos = agd.quantGD[gd];
 
 	agd.gd_anteriores();
 
-	for (int d = 1; d < agd.quantGD[gd]; d++)
+	for (int d = 1; d < gds_pos; d++)
 	{
 		aleat = rand() % vgd.size();
 
+		agd.quantGD[gd] = agd.quantGD[gd] - 1; //tira 1 GD
 
-
+		agd.quantGD[vgd[aleat]] = agd.quantGD[gd] + 1; //aumenta um GD
 	}
 	
+	//atualizar posicoes dos GDs
+	float solucao = 0.0;
+
 
 
 }
