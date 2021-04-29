@@ -212,6 +212,8 @@ public:
 
 	void volta_gd_anteriores();
 
+	void atualizaGD();
+
 	float PotW(float IS);
 
 	void ajustePOT(complex<float> S[linha_dados], float P[linha_dados], float P_gd[linha_dados], float demanda, int posGD[linha_dados]);
@@ -1703,6 +1705,11 @@ void AlocacaoGD::volta_gd_anteriores()
 	{
 		agd.quantGD[i] = agd.ant_quantGD[i];
 	}
+}
+
+void AlocacaoGD::atualizaGD()
+{
+	//funcao para atualizar a posicao dos GDs
 }
 
 float AlocacaoGD::PotW(float IS)
@@ -3751,6 +3758,8 @@ float VND::v4_VND(int GD2, float incumbentv4)
 	
 	//atualizar posicoes dos GDs
 	float solucao = 0.0;
+
+	solucao = fo.calculo_funcao_objetivo(gd_al);
 
 
 
