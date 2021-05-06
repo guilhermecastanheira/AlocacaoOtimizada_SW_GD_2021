@@ -212,7 +212,7 @@ public:
 
 	void volta_gd_anteriores();
 
-	void atualizaGD();
+	void atualizaPosGD();
 
 	float PotW(float IS);
 
@@ -1707,9 +1707,37 @@ void AlocacaoGD::volta_gd_anteriores()
 	}
 }
 
-void AlocacaoGD::atualizaGD()
+void AlocacaoGD::atualizaPosGD()
 {
 	//funcao para atualizar a posicao dos GDs
+
+	//zerar mx de GDs
+	for (int i = 1; i < num_AL; i++)
+	{
+		for (int j = 1; j < linha_dados; j++)
+		{
+			agd.posicaoGD[i][j] = 0;
+		}
+	}
+
+	//atribuir as posicoes do gd
+	int index_linha = 0;
+	int index_coluna = 0;
+
+	for (int k = 1; k < linha_dados; k++)
+	{
+		if (ps.noi[k] > 999)
+		{
+			index_linha++;
+			index_coluna = 1;
+		}
+
+		if (agd.quantGD[k] != 0)
+		{
+			agd.posicaoGD[index_linha][index_coluna] = k;
+			index_coluna++;
+		}
+	}
 }
 
 float AlocacaoGD::PotW(float IS)
