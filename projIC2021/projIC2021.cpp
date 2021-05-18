@@ -4062,10 +4062,12 @@ float RVNS::v3_RVNS(float incumbentmainv3)
 	poschv3 = ac.posicaochaves[al1][sortchv3];
 
 	gvns.chaves_anterioresVND(al1);
+	agd.gd_anteriores();
 	gvns.fo_anteriorVND(al1);
 
 	//sorteando demais chaves
 	gvns.sorteiochaves(ac.numch_AL[al1], fxp.camadaAL[al1], ac.posicaochaves[al1], al1);
+	gvns.sorteioGDs(agd.numgd_AL[al1], fxp.camadaAL[al1], agd.posicaoGD[al1], al1, agd.quantGD);
 
 	for (int j = 1; j < linha_dados; j++)
 	{
@@ -4139,6 +4141,7 @@ float RVNS::v3_RVNS(float incumbentmainv3)
 
 	//sorteio do segundo alimentador
 	gvns.sorteiochaves(ac.numch_AL[al2], fxp.camadaAL[al2], ac.posicaochaves[al2], al2);
+	gvns.sorteioGDs(agd.numgd_AL[al1], fxp.camadaAL[al1], agd.posicaoGD[al1], al1, agd.quantGD);
 
 	for (int j = 1; j < linha_dados; j++)
 	{
