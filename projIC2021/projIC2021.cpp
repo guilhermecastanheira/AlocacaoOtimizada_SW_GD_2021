@@ -256,6 +256,7 @@ public:
 
 	float fo_al_savevnd[num_AL] = {};
 
+	int localizaAL(int posicao);
 	void chaves_anterioresVND(int alm);
 	void volta_chaves_anterioresVND(int almv);
 	void fo_anteriorVND(int almfo);
@@ -264,7 +265,6 @@ public:
 	void primeiraaloc();
 	void sorteiochaves(int numch, int camada[linha_dados][linha_dados], int posicao_camada[linha_dados], int alimentador); //sorteio inicial das chaves
 	void sorteioGDs(int numgd, int camada[linha_dados][linha_dados], int posicao_camada[linha_dados], int alimentador, int qntGD[linha_dados]); //sorteio inicial de GDs
-
 }gvns;
 
 class RVNS : public GVNS
@@ -275,11 +275,13 @@ public:
 	int q_rvns2 = 0;
 	int q_rvns3 = 0;
 	int q_rvns4 = 0;
+	int q_rvns5 = 0;
 
-	float v1_RVNS(float incumbentmainv1);
-	float v2_RVNS(float incumbentmainv2);
-	float v3_RVNS(float incumbentmainv3);
-	float v4_RVNS(float incumbentmainv4);
+	float v1_RVNS(float incumbentmain1);
+	float v2_RVNS(float incumbentmain2);
+	float v3_RVNS(float incumbentmain3);
+	float v4_RVNS(float incumbentmain4);
+	float v5_RVNS(float incumbentmain5);
 }rvns;
 
 class VND : public GVNS
@@ -2847,6 +2849,27 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 	return valorFO;
 }
 
+int GVNS::localizaAL(int posicao)
+{
+	//localiza o alimentador
+	//variaveis locais
+	int posicao_alimentador = 0;
+
+	for (int i = 1; i < linha_dados; i++)
+	{
+		if (ps.noi[i] > 999)
+		{
+			posicao_alimentador = i;
+		}
+		if (posicao == i)
+		{
+			break;
+		}
+	}
+
+	return posicao_alimentador;
+}
+
 void GVNS::sorteiochaves(int numch, int camada[linha_dados][linha_dados], int posicao_camada[linha_dados], int alimentador)
 {
 	int barras_camada[linha_dados];
@@ -3857,7 +3880,7 @@ inicioVND:
 	return vnd_incumbent;
 }
 
-float RVNS::v1_RVNS(float incumbentmainv1)
+float RVNS::v1_RVNS(float incumbentmain1)
 {
 	//DESCRICAO: selecionar 'n' chaves aleatorias do sistema e 'n' GDs e fazer o VND
 
@@ -3867,7 +3890,7 @@ float RVNS::v1_RVNS(float incumbentmainv1)
 	float incumbentv1 = 0.0;
 	float resultadov1 = 0.0;
 
-	incumbentv1 = incumbentmainv1;
+	incumbentv1 = incumbentmain1;
 
 	//sorteios 
 	qch = rand() % ac.numch_SIS + 1;
@@ -4406,7 +4429,91 @@ float RVNS::v3_RVNS(float incumbentmain3)
 
 float RVNS::v4_RVNS(float incumbentmain4)
 {
-	//adiciona uma chave no sistema
+	//quarta vizinhanca - adiciona uma chave no sistema
+
+	//variaveis locais
+	int nova_ch = 0;
+	bool add = false;
+	int al = 0;
+	float resultado = 0.0;
+
+	//adicionando chave
+	while (!add)
+	{
+		add = true; //assume verdadeiro pois se satisfazer as condicoes
+		nova_ch = rand() % linha_dados + 1;
+
+		//verifica possibilidade e existencia
+		if (ps.candidato_aloc[nova_ch] == 0)
+		{
+			//possibilidade
+			add = false;
+		}
+		else
+		{
+			//existencia
+			for (int i = 1; i < num_AL; i++)
+			{
+				for (int j = 1; j < linha_dados; j++)
+				{
+					if (ac.posicaochaves[i][j] == nova_ch)
+					{
+						add = false;
+					}
+				}
+			}
+		}
+	}
+
+	//incluindo chave no alimentador e vazendo VND para todas as chaves com GDS aleatorios (vizinhanca 3)
+	al = gvns.localizaAL(nova_ch);
+	resultado = rvns.v3_RVNS(incumbentmain4);
+	//retorna o valor encontrado com a vizinhança 3
+	return resultado;
+}
+
+float RVNS::v5_RVNS(float incumbentmain5)
+{
+	//quinta vizinhança - adiciona um gd no sistema
+	//variaveis locais
+	int novo_gd = 0;
+	bool add = false;
+	int al = 0;
+	float resultado = 0.0;
+
+	//adicionando chave
+	while (!add)
+	{
+		add = true; //assume verdadeiro pois se satisfazer as condicoes
+		novo_gd = rand() % linha_dados + 1;
+
+		//verifica possibilidade e existencia
+		if (ps.candidato_GD[novo_gd] == 0)
+		{
+			//possibilidade
+			add = false;
+		}
+		else
+		{
+			//existencia
+			for (int i = 1; i < num_AL; i++)
+			{
+				for (int j = 1; j < linha_dados; j++)
+				{
+					if (agd.posicaoGD[i][j] == novo_gd)
+					{
+						add = false;
+					}
+				}
+			}
+		}
+	}
+
+	//incluindo GD no alimentador e vazendo VND para todas os GDs com chaves aleatorias (vizinhanca 2)
+	al = gvns.localizaAL(novo_gd);
+	resultado = rvns.v2_RVNS(incumbentmain5);
+	//retorna o valor encontrado com a vizinhança 2
+	return resultado;
 }
 //############################################################################################
 
@@ -4591,6 +4698,19 @@ metaheuristicGVNS:
 		rvns.q_rvns4++;
 
 		cout << "4-RVNS: " << incumbent_solution << endl;
+
+		goto metaheuristicGVNS;
+	}
+
+	cout << ". \n";
+	current_solution = rvns.v5_RVNS(incumbent_solution);
+
+	if (current_solution < incumbent_solution)
+	{
+		incumbent_solution = current_solution;
+		rvns.q_rvns5++;
+
+		cout << "5-RVNS: " << incumbent_solution << endl;
 
 		goto metaheuristicGVNS;
 	}
