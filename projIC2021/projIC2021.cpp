@@ -27,7 +27,7 @@ using namespace std;
 #define estado_restaurativo_pu 0.93 //tensao minima no estado restaurativo
 #define capSE 100000000 //potencia maxima de cada alimentador
 #define maxGD 5 //numero maximo de GD que pode ser instalado na barra
-#define num_c 33 //numeros de cenarios a serem considerados: 32 (+1 para o cpp)
+#define num_c 8 //numeros de cenarios a serem considerados (+1 para o cpp)
 
 int alimentadores[num_AL] = { 0, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007 }; // alimentadores
 
@@ -35,7 +35,7 @@ int alimentadores[num_AL] = { 0, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007 
 
 #define tempo_falha 4 //numero de horas que o sistema fica em estado restaurativo
 #define tempo_isolacao 0.12 //tempo necessario para fazer as manobras em horas
-#define taxa_falhas 0.00000822 //taxa de falhas por km no ano
+#define taxa_falhas 0.00000822 //taxa de falhas por km por hora - faz isso pq no fim a FO se dará em ano
 #define GDinicial 2 //numero de gd inicial em cada alimentador
 #define SWinicial 2 //numero de chaves de manobra inicial em cada alimentador
 
@@ -3900,6 +3900,7 @@ float RVNS::v1_RVNS(float incumbentmainv1)
 	return incumbentv1;
 }
 
+/*
 float RVNS::v2_RVNS(float incumbentmainv2)
 {
 	//DESCRICAO: sorteia dois alimentadores e faz VND em suas chaves e gds
@@ -3992,6 +3993,7 @@ float RVNS::v2_RVNS(float incumbentmainv2)
 	return incumbentv2;
 }
 
+
 float RVNS::v3_RVNS(float incumbentmainv3)
 {
 	//DESCRICAO: seleciona dois alimentadores, seleciona uma chave para manter de um deles e faz o vnd para todas as chaves desses alimentadores
@@ -4065,7 +4067,7 @@ float RVNS::v3_RVNS(float incumbentmainv3)
 	agd.gd_anteriores();
 	gvns.fo_anteriorVND(al1);
 
-	//sorteando demais chaves
+	//sorteando demais chaves e gds
 	gvns.sorteiochaves(ac.numch_AL[al1], fxp.camadaAL[al1], ac.posicaochaves[al1], al1);
 	gvns.sorteioGDs(agd.numgd_AL[al1], fxp.camadaAL[al1], agd.posicaoGD[al1], al1, agd.quantGD);
 
@@ -4109,6 +4111,7 @@ float RVNS::v3_RVNS(float incumbentmainv3)
 	if (incumbentv3 > retorna_incumbentv3)
 	{
 		gvns.volta_chaves_anterioresVND(al1);
+		agd.volta_gd_anteriores();
 		gvns.volta_fo_anteriorVND(al1);
 	}
 	else
@@ -4322,7 +4325,89 @@ float RVNS::v4_RVNS(float incumbentmainv4)
 
 	return retorna_incumbentv4;
 }
+*/
 
+float RVNS::v2_RVNS(float incumbentmain2)
+{
+	//segunda vizinhança - manter chaves e sortear todos os GDS de um alimentador
+
+	//variaveis locais
+	int gd = 0;
+	int ch = 0;
+	int al = 0;
+	float incumbent = 0.0;
+	float resultado = 0.0;
+
+	//inicio
+	incumbent = incumbentmain2;
+	al = rand() % num_AL + 1;
+	ac.chaves_anteriores();
+	agd.gd_anteriores();
+	gvns.sorteioGDs(agd.numgd_AL[al], fxp.camadaAL[al], agd.posicaoGD[al], al, agd.quantGD);
+
+	//execucao vizinhança
+	for (int i = 1; i < agd.numgd_AL[al]; i++)
+	{
+		ch = rand() % ac.numch_AL[al] + 1;//chave aleatoria para acompanhar o metodo
+		resultado = vnd.VND_intensificacao(ch, gd, incumbent);
+		if (resultado < incumbent) { incumbent = resultado; }
+	}
+
+	if (incumbent < incumbentmain2)
+	{
+		return incumbent;
+	}
+	else
+	{
+		agd.volta_gd_anteriores();
+		ac.volta_chaves_anteriores();
+		return incumbentmain2;
+	}
+	
+}
+
+float RVNS::v3_RVNS(float incumbentmain3)
+{
+	//terceira vizinhança - manter gds e sortear chaves
+
+	//variaveis locais
+	int ch = 0;
+	int gd = 0;
+	int al = 0;
+	float incumbent = 0.0;
+	float resultado = 0.0;
+
+	//inicio
+	incumbent = incumbentmain3;
+	ac.chaves_anteriores();
+	agd.gd_anteriores();
+	al = rand() % num_AL + 1;
+	gvns.sorteiochaves(ac.numch_AL[al], fxp.camadaAL[al], ac.posicaochaves[al], alimentadores[al]);
+
+	//execucao vizinhança
+	for (int i = 1; i < ac.numch_AL[al]; i++)
+	{
+		gd = rand() % agd.numgd_AL[al] + 1;//chave aleatoria para acompanhar o metodo
+		resultado = vnd.VND_intensificacao(ch, gd, incumbent);
+		if (resultado < incumbent) { incumbent = resultado; }
+	}
+
+	if (incumbent < incumbentmain3)
+	{
+		return incumbent;
+	}
+	else
+	{
+		agd.volta_gd_anteriores();
+		ac.volta_chaves_anteriores();
+		return incumbentmain3;
+	}
+}
+
+float RVNS::v4_RVNS(float incumbentmain4)
+{
+	//adiciona uma chave no sistema
+}
 //############################################################################################
 
 int main()
