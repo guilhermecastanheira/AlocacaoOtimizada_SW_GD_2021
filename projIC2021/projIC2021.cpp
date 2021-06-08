@@ -39,7 +39,7 @@ int alimentadores[num_AL] = { 0, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007 
 #define GDinicial 2 //numero de gd inicial em cada alimentador
 #define SWinicial 2 //numero de chaves de manobra inicial em cada alimentador
 
-#define criterio_parada 3 //criterio de parada da metaheuristica
+#define criterio_parada 5 //criterio de parada da metaheuristica
 #define numero_simulacoes 30 //numero de simulacoes que o algoritmo faz
 
 // Custos -------------------------------------
@@ -2664,7 +2664,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 				{
 					if (remanej_cargas.size() != 0)
 					{
-						cout << "remanej ok" << endl;
+						//cout << "remanej ok" << endl;
 						ens = ps.potencia_al;
 
 						//somente uma opcao para remanejamento de cada vez
@@ -2731,7 +2731,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 					else
 					{
 						//nao tem como fazer manobra, a ENS será os adjacentes da chave
-						cout << "sem remanje" << endl;
+						//cout << "sem remanje" << endl;
 						ens = 0.0;
 
 						for (int y = 1; y < linha_dados; y++)
@@ -2766,7 +2766,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 				else
 				{
 					//a ens é a soma das potencias da secao somente
-					cout << "opILHA ok" << endl;
+					//cout << "opILHA ok" << endl;
 					ens = 0.0;
 
 					for (int y = 1; y < linha_dados; y++)
@@ -2801,7 +2801,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 				if (ens < 0) { 
 					
 					
-					cout << "report error - alimentador: " << w << endl;
+					//cout << "report error - alimentador: " << w << endl;
 				
 				}
 
@@ -3757,7 +3757,7 @@ float VND::v4_VND(int GD2, float incumbentv4)
 
 					bool start = false;
 
-					//pegar o vetor onde pode ser alocado GD£
+					//pegar o vetor onde pode ser alocado GDs
 					vgd.clear();
 					for (int k = 1; k < linha_dados; k++)
 					{
@@ -3808,12 +3808,12 @@ float VND::v4_VND(int GD2, float incumbentv4)
 	}
 	
 	//atualizar posicoes dos GDs
+	agd.atualizaPosGD();
+
+	//calcula a FO
 	float solucao = 0.0;
-
 	solucao = fo.calculo_funcao_objetivo(gd_al);
-
-
-
+	return solucao;
 }
 
 float VND::VND_intensificacao(int ch, int gd, float sol_incumbent)
@@ -3835,7 +3835,7 @@ inicioVND:
 		vnd_incumbent = vnd_current;
 		q_vnd1++;
 
-		//cout << "_ 1-VND: " << vnd_incumbent << endl;
+		cout << "\t _ 1-VND: " << vnd_incumbent << endl;
 
 		goto inicioVND;
 	}
@@ -3847,7 +3847,7 @@ inicioVND:
 		vnd_incumbent = vnd_current;
 		q_vnd2++;
 
-		//cout << "_ 2-VND: " << vnd_incumbent << endl;
+		cout << "\t _ 2-VND: " << vnd_incumbent << endl;
 
 		goto inicioVND;
 	}
@@ -3859,11 +3859,11 @@ inicioVND:
 		vnd_incumbent = vnd_current;
 		q_vnd2++;
 
-		//cout << "_ 3-VND: " << vnd_incumbent << endl;
+		cout << "\t _ 3-VND: " << vnd_incumbent << endl;
 
 		goto inicioVND;
 	}
-
+	
 	vnd_current = v4_VND(gd, vnd_incumbent);
 
 	if (vnd_current < vnd_incumbent)
@@ -3871,7 +3871,7 @@ inicioVND:
 		vnd_incumbent = vnd_current;
 		q_vnd2++;
 
-		//cout << "_ 4-VND: " << vnd_incumbent << endl;
+		cout << "\t _ 4-VND: " << vnd_incumbent << endl;
 
 		goto inicioVND;
 	}
@@ -4604,7 +4604,7 @@ inicio_alg:
 	{
 		if (agd.quantGD[i] != 0)
 		{
-			agd.qntGD_SIS++;
+			agd.qntGD_SIS = agd.qntGD_SIS + agd.quantGD[i];
 		}
 	}
 
@@ -4624,6 +4624,22 @@ inicio_alg:
 		}
 	}
 	cout << "\n";
+
+	//imprimindo GDs iniciais
+	cout << "GDs Iniciais:" << endl;
+	cout << "\n";
+	cout << "Barras: ";
+	for (int i = 1; i < num_AL; i++)
+	{
+		for (int j = 1; j < linha_dados; j++)
+		{
+			if (agd.posicaoGD[i][j] != 0)
+			{
+				cout << ps.nof[agd.posicaoGD[i][j]]<<", ";
+			}
+		}
+	}
+	cout << "\n\n";
 
 	//calcular valor da FO total
 
@@ -4742,6 +4758,22 @@ metaheuristicGVNS:
 		}
 	}
 	cout << "\n";
+
+	//GDS Finais
+	cout << "GDs Iniciais:" << endl;
+	cout << "\n";
+	cout << "Barras: ";
+	for (int i = 1; i < num_AL; i++)
+	{
+		for (int j = 1; j < linha_dados; j++)
+		{
+			if (agd.posicaoGD[i][j] != 0)
+			{
+				cout << ps.nof[agd.posicaoGD[i][j]] << ", ";
+			}
+		}
+	}
+	cout << "\n\n";
 
 	//total iteracoes
 	cout << "Numero de iteracoes: " << itGVNS << endl;
