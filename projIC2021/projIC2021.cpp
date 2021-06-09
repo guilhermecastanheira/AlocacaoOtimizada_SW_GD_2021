@@ -1855,19 +1855,22 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 	ps.leitura_parametros();
 	fxp.fluxo_potencia();
 	
+	
+	int w = p_AL; //atribui para os calculos
+
 	//barras do alimentador w
 	barras.clear();
 	for (int q = 1; q < linha_dados; q++)
 	{
-		if (ac.adjacente_chaves[p_AL][1][q] != 0)
+		if (ac.adjacente_chaves[w][1][q] != 0)
 		{
-			barras.push_back(ac.adjacente_chaves[p_AL][1][q]);
+			barras.push_back(ac.adjacente_chaves[w][1][q]);
 		}
 	}
 
 	for (int i2 = 1; i2 < num_c; i2++)
 	{
-		perdas = fxp.perdas_ativa(ac.adjacente_chaves[p_AL][1]);
+		perdas = fxp.perdas_ativa(ac.adjacente_chaves[w][1]);
 
 		ENSt = 0.0;
 
@@ -1879,7 +1882,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 
 			for (int k = 0; k < linha_dados; k++)
 			{
-				if (ac.secoes_chaves[p_AL][j][k] != 0)
+				if (ac.secoes_chaves[w][j][k] != 0)
 				{
 					contcondicao++;
 				}
@@ -1901,7 +1904,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 				//comprimento
 				for (int y = 1; y < linha_dados; y++)
 				{
-					if (ac.secoes_chaves[p_AL][j][k] == ps.nof[y])
+					if (ac.secoes_chaves[w][j][k] == ps.nof[y])
 					{
 						comprimento_secao = comprimento_secao + ps.dist_no[y];
 					}
@@ -1913,7 +1916,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 			{
 				for (int y = 1; y < linha_dados; y++)
 				{
-					if (ac.adjacente_chaves[p_AL][1][k] == ps.nof[y])
+					if (ac.adjacente_chaves[w][1][k] == ps.nof[y])
 					{
 						potencia_isolacao = potencia_isolacao + ps.s_nofr[y];
 					}
@@ -1927,10 +1930,10 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 			{
 				for (int y = 1; y < linha_dados; y++)
 				{
-					if (ac.secoes_chaves[p_AL][j][k] == 0 || ac.posicaochaves[p_AL][y] == 0) { continue; }
-					else if (ac.secoes_chaves[p_AL][j][k] == ps.nof[ac.posicaochaves[p_AL][y]] || ac.secoes_chaves[p_AL][j][k] == ps.noi[ac.posicaochaves[p_AL][y]])
+					if (ac.secoes_chaves[w][j][k] == 0 || ac.posicaochaves[w][y] == 0) { continue; }
+					else if (ac.secoes_chaves[w][j][k] == ps.nof[ac.posicaochaves[w][y]] || ac.secoes_chaves[w][j][k] == ps.noi[ac.posicaochaves[w][y]])
 					{
-						ps.estado_swt[ac.posicaochaves[p_AL][y]] = 0;
+						ps.estado_swt[ac.posicaochaves[w][y]] = 0;
 					}
 				}
 			}
@@ -1939,7 +1942,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 			{
 				for (int k = 1; k < linha_dados; k++)
 				{
-					if (ps.noi[k] == alimentadores[p_AL])
+					if (ps.noi[k] == alimentadores[w])
 					{
 						ps.estado_swt[k] = 0;
 					}
@@ -1954,9 +1957,9 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 				{
 					for (int t = 1; t < linha_dados; t++)
 					{
-						if (fxp.camadaAL[p_AL][k][y] == ac.secoes_chaves[p_AL][j][t])
+						if (fxp.camadaAL[w][k][y] == ac.secoes_chaves[w][j][t])
 						{
-							fxp.camadaAL[p_AL][k][y] = 0;
+							fxp.camadaAL[w][k][y] = 0;
 						}
 					}
 				}
@@ -1973,9 +1976,9 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 
 				for (int y = 1; y < linha_dados; y++)
 				{
-					if (fxp.camadaAL[p_AL][k][y] != 0)
+					if (fxp.camadaAL[w][k][y] != 0)
 					{
-						secao.push_back(fxp.camadaAL[p_AL][k][y]);
+						secao.push_back(fxp.camadaAL[w][k][y]);
 						cont_nao0++;
 					}
 				}
@@ -1993,7 +1996,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 						{
 							for (int t = 0; t < secao.size(); t++)
 							{
-								if (secao[t] == ac.secoes_chaves[p_AL][m][n])
+								if (secao[t] == ac.secoes_chaves[w][m][n])
 								{
 									posicao.push_back(m);
 								}
@@ -2030,9 +2033,9 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 
 				for (int t = 1; t < linha_dados; t++)
 				{
-					if (ac.adjacente_chaves[p_AL][posicao[k]][t] != 0)
+					if (ac.adjacente_chaves[w][posicao[k]][t] != 0)
 					{
-						secao.push_back(ac.adjacente_chaves[p_AL][posicao[k]][t]);
+						secao.push_back(ac.adjacente_chaves[w][posicao[k]][t]);
 					}
 				}
 
@@ -2098,52 +2101,55 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 
 
 			//3.1) Operação em Ilha - NAO CONSIDERAR
-			//fechando chave da secao
-
-			for (int k = 1; k < linha_dados; k++)
-			{
-				for (int y = 1; y < linha_dados; y++)
-				{
-					if (ac.secoes_chaves[p_AL][j][k] == 0 || ac.posicaochaves[p_AL][y] == 0) { continue; }
-					else if (ac.secoes_chaves[p_AL][j][k] == ps.nof[ac.posicaochaves[p_AL][y]] || ac.secoes_chaves[p_AL][j][k] == ps.noi[ac.posicaochaves[p_AL][y]])
-					{
-						ps.estado_swt[ac.posicaochaves[p_AL][y]] = 0;
-					}
-				}
-			}
-
 			if (ps.cenario_is[i2] != 0)
 			{
-				operacaoILHA = agd.opILHA(ac.secoes_chaves[p_AL], ac.adjacente_chaves[p_AL], agd.posicaoGD[p_AL], alimentadores[p_AL], j);
+				//fechando chave da secao
+
+				for (int k = 1; k < linha_dados; k++)
+				{
+					for (int y = 1; y < linha_dados; y++)
+					{
+						if (ac.secoes_chaves[w][j][k] == 0 || ac.posicaochaves[w][y] == 0) { continue; }
+						else if (ac.secoes_chaves[w][j][k] == ps.nof[ac.posicaochaves[w][y]] || ac.secoes_chaves[w][j][k] == ps.noi[ac.posicaochaves[w][y]])
+						{
+							ps.estado_swt[ac.posicaochaves[w][y]] = 0;
+						}
+					}
+				}
+
+
+				operacaoILHA = agd.opILHA(ac.secoes_chaves[w], ac.adjacente_chaves[w], agd.posicaoGD[w], alimentadores[w], j);
 
 				ps.leitura_parametros();
 				fxp.fluxo_potencia();
 				//ajustes para o cenario
-				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
+				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
 
-				agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
+				agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
 
 				ps.somatorio_potencia();
-				ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[p_AL][1]); //toda a potencia do alimentador
+				ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
 			}
 			else
 			{
 				ps.leitura_parametros();
 				fxp.fluxo_potencia();
 				//ajustes para o cenario
-				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
+				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
 
-				agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
+				agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
 
 				ps.somatorio_potencia();
-				ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[p_AL][1]); //toda a potencia do alimentador
+				ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
 			}
+
 
 			//3.2) A operação em ilha nao acontece, sendo necessário fazer o remanejamento de cargas
 			if (!operacaoILHA)
 			{
 				if (remanej_cargas.size() != 0)
 				{
+					//cout << "remanej ok" << endl;
 					ens = ps.potencia_al;
 
 					//somente uma opcao para remanejamento de cada vez
@@ -2158,10 +2164,10 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 							{
 								for (int y = 1; y < linha_dados; y++)
 								{
-									if (ac.secoes_chaves[p_AL][j][k] == 0 || ac.posicaochaves[p_AL][y] == 0) { continue; }
-									else if (ac.secoes_chaves[p_AL][j][k] == ps.nof[ac.posicaochaves[p_AL][y]] || ac.secoes_chaves[p_AL][j][k] == ps.noi[ac.posicaochaves[p_AL][y]])
+									if (ac.secoes_chaves[w][j][k] == 0 || ac.posicaochaves[w][y] == 0) { continue; }
+									else if (ac.secoes_chaves[w][j][k] == ps.nof[ac.posicaochaves[w][y]] || ac.secoes_chaves[w][j][k] == ps.noi[ac.posicaochaves[w][y]])
 									{
-										ps.estado_swt[ac.posicaochaves[p_AL][y]] = 0;
+										ps.estado_swt[ac.posicaochaves[w][y]] = 0;
 									}
 								}
 							}
@@ -2169,7 +2175,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 							//abrindo chave
 							ps.estado_swt[remanej_cargas[a][b]] = 1;
 
-							potencia_W = ac.energia_suprida(p_AL, barras);
+							potencia_W = ac.energia_suprida(w, barras);
 
 							ps.estado_swt[remanej_cargas[a][b]] = 0;
 
@@ -2189,7 +2195,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 						{
 							for (int h = 1; h < linha_dados; h++)
 							{
-								if (ps.nof[h] == ac.adjacente_chaves[p_AL][j][y])
+								if (ps.nof[h] == ac.adjacente_chaves[w][j][y])
 								{
 									ens = ens + ps.s_nofr[h];
 								}
@@ -2200,24 +2206,24 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 					ps.leitura_parametros();
 					fxp.fluxo_potencia();
 					//ajustes para o cenario
-					agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
+					agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
 
-					agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
+					agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
 
 					ps.somatorio_potencia();
-					ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[p_AL][1]); //toda a potencia do alimentador
+					ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
 				}
 				else
 				{
 					//nao tem como fazer manobra, a ENS será os adjacentes da chave
-
+					//cout << "sem remanje" << endl;
 					ens = 0.0;
 
 					for (int y = 1; y < linha_dados; y++)
 					{
 						for (int h = 1; h < linha_dados; h++)
 						{
-							if (ps.nof[h] == ac.adjacente_chaves[p_AL][j][y])
+							if (ps.nof[h] == ac.adjacente_chaves[w][j][y])
 							{
 								ens = ens + ps.s_nofr[h];
 							}
@@ -2230,53 +2236,59 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 
 					} //funciona ilhado
 
+
 					ps.leitura_parametros();
 					fxp.fluxo_potencia();
 					//ajustes para o cenario
-					agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
+					agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
 
-					agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
+					agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
 
 					ps.somatorio_potencia();
-					ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[p_AL][1]); //toda a potencia do alimentador
+					ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
 				}
 			}
 			else
 			{
-			//a ens é a soma das potencias da secao somente
+				//a ens é a soma das potencias da secao somente
+				//cout << "opILHA ok" << endl;
 				ens = 0.0;
 
 				for (int y = 1; y < linha_dados; y++)
 				{
 					for (int h = 1; h < linha_dados; h++)
 					{
-						if (ps.nof[h] == ac.secoes_chaves[p_AL][j][y])
+						if (ps.nof[h] == ac.secoes_chaves[w][j][y])
 						{
 							ens = ens + ps.s_nofr[h];
 						}
 					}
 				}
 
-				if (ens < 0 )
+				if (ens < 0)
 				{
 					ens = 0;
 				}
 
-
 				ps.leitura_parametros(); //reseta dados
 				fxp.fluxo_potencia();
 				//ajustes para o cenario
-				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[p_AL]); //ajusta potencia do GD
+				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
 
-				agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[p_AL]); //ajusta a potencia para fazer o fluxo de potencia
+				agd.ajustePOT(ps.pu_s_nof, ps.s_nofr, agd.GDbarra, ps.cenario_demanda[i2], agd.posicaoGD[w]); //ajusta a potencia para fazer o fluxo de potencia
 
 				ps.somatorio_potencia();
-				ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[p_AL][1]); //toda a potencia do alimentador
+				ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
 			}
 
 			//4 custos do cenario
 
-			if (ens < 0) { cout << "report error" << endl; }
+			if (ens < 0) {
+
+
+				//cout << "report error - alimentador: " << w << endl;
+
+			}
 
 			ENSt = ENSt + FO(potencia_isolacao, comprimento_secao, ens);
 
@@ -2284,6 +2296,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 			remanej_cargas.clear();
 			secao.clear();
 			posicao.clear();
+
 
 		}
 
@@ -2294,10 +2307,19 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 
 	}
 
+	//zerar variaveis para o novo alimentador
+
+	fo.investimentoCM = 0.0;
+	fo.investimentoGD = 0.0;
+	fo.custoENS = 0.0;
+	fo.custoPe = 0.0;
+	fo.custoP = 0.0;
+	fo.custoEmss = 0.0;
+
+	barras.clear();
 	//Fim dos cenarios
 	fo.investimentoCM = ac.numch_AL[p_AL] * custoSW; //investimento das chaves de manobra
 	fo.investimentoGD = agd.numgd_AL[p_AL] * custoGD; //investimento para colocar o GD no sistema
-
 
 	float valorFO = 0.0;
 
@@ -3840,6 +3862,8 @@ inicioVND:
 		goto inicioVND;
 	}
 
+	/*
+	
 	vnd_current = v2_VND(ch, vnd_incumbent);
 
 	if (vnd_current < vnd_incumbent)
@@ -3852,6 +3876,9 @@ inicioVND:
 		goto inicioVND;
 	}
 
+	*/
+
+	//segunda vizinhança do VND
 	vnd_current = v3_VND(gd, vnd_incumbent);
 
 	if (vnd_current < vnd_incumbent)
@@ -3859,11 +3886,12 @@ inicioVND:
 		vnd_incumbent = vnd_current;
 		q_vnd2++;
 
-		cout << "\t _ 3-VND: " << vnd_incumbent << endl;
+		cout << "\t _ 2-VND: " << vnd_incumbent << endl;
 
 		goto inicioVND;
 	}
 	
+	/*
 	vnd_current = v4_VND(gd, vnd_incumbent);
 
 	if (vnd_current < vnd_incumbent)
@@ -3875,6 +3903,8 @@ inicioVND:
 
 		goto inicioVND;
 	}
+	*/
+
 
 	//fim vnd
 	return vnd_incumbent;
@@ -3886,28 +3916,17 @@ float RVNS::v1_RVNS(float incumbentmain1)
 
 	int qch = 0;
 	int qgd = 0;
-	int menor = 0;
+	int numero = 0;
 	float incumbentv1 = 0.0;
 	float resultadov1 = 0.0;
 
 	incumbentv1 = incumbentmain1;
 
-	//sorteios 
-	qch = rand() % ac.numch_SIS + 1;
-	qgd = rand() % agd.qntGD_SIS + 1;
-
-	//ver menor,
-	if (qch <= qgd)
-	{
-		menor = qch;
-	}
-	else
-	{
-		menor = qgd;
-	}
+	//sorteios - n é limitado entre 1 e 10
+	numero = (rand() % 10) + 1;
 
 	//sorteando
-	for (int i = 1; i < menor; i++)
+	for (int i = 0; i < numero; i++)
 	{
 		qch = rand() % ac.numch_SIS + 1;
 		qgd = rand() % agd.qntGD_SIS + 1;
@@ -4352,6 +4371,7 @@ float RVNS::v4_RVNS(float incumbentmainv4)
 
 float RVNS::v2_RVNS(float incumbentmain2)
 {
+	/*
 	//segunda vizinhança - manter chaves e sortear todos os GDS de um alimentador
 
 	//variaveis locais
@@ -4363,7 +4383,7 @@ float RVNS::v2_RVNS(float incumbentmain2)
 
 	//inicio
 	incumbent = incumbentmain2;
-	al = rand() % num_AL + 1;
+	al = (rand() % num_AL-1) + 1;
 	ac.chaves_anteriores();
 	agd.gd_anteriores();
 	gvns.sorteioGDs(agd.numgd_AL[al], fxp.camadaAL[al], agd.posicaoGD[al], al, agd.quantGD);
@@ -4386,11 +4406,58 @@ float RVNS::v2_RVNS(float incumbentmain2)
 		ac.volta_chaves_anteriores();
 		return incumbentmain2;
 	}
+	*/
+
+	//segunda vizinhança, escolher um alimentador e fazer o VND para as chaves desse alimentador com gds aleatorios
+
+	//variaveis locais
+	int al = 0;
+	int chaves_i = 0;
+	int chaves_f = 0;
+	int gd = 0;
+	float resultadov2 = 0.0;
+	float incumbentv2 = 0.0;
+
+	//executar vizinhança
+	incumbentv2 = incumbentmain2;
+
+	al = rand() % num_AL + 1;
+
+	for (int i = 1; i < num_AL; i++)
+	{
+		if (i < al)
+		{
+			chaves_i += ac.numch_AL[i];
+		}
+		else if (i == al)
+		{
+			chaves_f = chaves_i + ac.numch_AL[i];
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	for (int i = chaves_i; i < chaves_f; i++)
+	{
+		gd = rand() % agd.qntGD_SIS + 1;
+
+		resultadov2 = vnd.VND_intensificacao(i, gd, incumbentv2);
+
+		if (resultadov2 < incumbentv2)
+		{
+			incumbentv2 = resultadov2;
+		}
+	}
+	
+	return incumbentv2;
 	
 }
 
 float RVNS::v3_RVNS(float incumbentmain3)
 {
+	/*
 	//terceira vizinhança - manter gds e sortear chaves
 
 	//variaveis locais
@@ -4404,7 +4471,7 @@ float RVNS::v3_RVNS(float incumbentmain3)
 	incumbent = incumbentmain3;
 	ac.chaves_anteriores();
 	agd.gd_anteriores();
-	al = rand() % num_AL + 1;
+	al = (rand() % num_AL-1) + 1;
 	gvns.sorteiochaves(ac.numch_AL[al], fxp.camadaAL[al], ac.posicaochaves[al], alimentadores[al]);
 
 	//execucao vizinhança
@@ -4425,6 +4492,10 @@ float RVNS::v3_RVNS(float incumbentmain3)
 		ac.volta_chaves_anteriores();
 		return incumbentmain3;
 	}
+	*/
+
+	//terceira vizinhança - fazer semelhante a segunda vizinhança
+
 }
 
 float RVNS::v4_RVNS(float incumbentmain4)
@@ -4521,7 +4592,8 @@ int main()
 {
 
 	srand(static_cast <unsigned int> (time(NULL)));	//faz a aleatoriedade com base no relogio
-	//srand(time(NULL));
+	
+	srand(time(NULL));
 
 	int itGVNS = 0;
 	int simulacao = 0;
