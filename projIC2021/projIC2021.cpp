@@ -1857,7 +1857,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 	
 	
 	int w = p_AL; //atribui para os calculos
-
+	cout << "\n\t\t\talimentador:" << p_AL << endl;
 	//barras do alimentador w
 	barras.clear();
 	for (int q = 1; q < linha_dados; q++)
@@ -4824,14 +4824,13 @@ float RVNS::v5_RVNS(float incumbentmain5)
 
 	return incumbentmain5;
 }
+
 //############################################################################################
 
 int main()
 {
 
 	srand(static_cast <unsigned int> (time(NULL)));	//faz a aleatoriedade com base no relogio
-	
-	srand(time(NULL));
 
 	int itGVNS = 0;
 	int simulacao = 0;
@@ -5002,7 +5001,7 @@ metaheuristicGVNS:
 		goto metaheuristicGVNS;
 	}
 
-	cout << ". \n";
+	cout << "3. \n";
 	current_solution = rvns.v3_RVNS(incumbent_solution);
 
 	if (current_solution < incumbent_solution)
@@ -5015,7 +5014,7 @@ metaheuristicGVNS:
 		goto metaheuristicGVNS;
 	}
 
-	cout << ". \n";
+	cout << "4. \n";
 	current_solution = rvns.v4_RVNS(incumbent_solution);
 
 	if (current_solution < incumbent_solution)
