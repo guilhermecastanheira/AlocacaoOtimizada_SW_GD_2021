@@ -3068,6 +3068,37 @@ void GVNS::volta_fo_anteriorVND(int almfov)
 
 float VND::v1_VND(int ch1, float incumbentv1)
 {
+	//Mover chave para seu adjacente
+
+	//localizando chave
+	int cont = 0;
+	int al = 0;
+	int pch = 0;
+
+	for (int i = 1; i < num_AL; i++)
+	{
+		for (int j = 1; j < linha_dados; j++)
+		{
+			if (cont == ch1)
+			{
+				//encontrou a chave: pegar dados
+				al = i;
+				pch = j;
+				break;
+			}
+			else if (ac.posicaochaves[i][j] != 0)
+			{
+				//incrementa contador das chaves
+				cont++;
+			}
+			else { continue; }
+		}
+	}
+
+	//possibilidades dos vizinhos
+	vector<int>adjch;
+
+
 	
 }
 
