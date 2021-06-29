@@ -258,10 +258,6 @@ public:
 	float fo_al_savevnd[num_AL] = {};
 
 	int localizaAL(int posicao);
-	void chaves_anterioresVND(int alm);
-	void volta_chaves_anterioresVND(int almv);
-	void fo_anteriorVND(int almfo);
-	void volta_fo_anteriorVND(int almfov);
 
 	void primeiraaloc();
 	void sorteiochaves(int numch, int camada[linha_dados][linha_dados], int posicao_camada[linha_dados], int alimentador); //sorteio inicial das chaves
@@ -2331,12 +2327,6 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 	{
 		fo_al[p_AL] = valorFO;
 	}
-	else
-	{
-		ac.volta_chaves_anteriores();
-		ac.secoes_alimentador();
-		agd.volta_gd_anteriores();
-	}
 
 	//calculo F0 geral
 	float resultado_FO = 0.0;
@@ -3032,48 +3022,13 @@ void GVNS::primeiraaloc() //alterar conforme o numero de alimentadores, modifica
 	}
 }
 
-void GVNS::chaves_anterioresVND(int alm)
-{
-	//salva as chaves do alimentador informado
-	for (int j = 1; j < linha_dados; j++)
-	{
-		antchivnd[alm][j] = ac.chi[alm][j];
-		antchfvnd[alm][j] = ac.chf[alm][j];
-		antposvnd[alm][j] = ac.posicaochaves[alm][j];
-	}
-}
-
-void GVNS::volta_chaves_anterioresVND(int almv)
-{
-	//volta as chaves	 
-	for (int j = 1; j < linha_dados; j++)
-	{
-		ac.chi[almv][j] = antchivnd[almv][j];
-		ac.chf[almv][j] = antchfvnd[almv][j];
-		ac.posicaochaves[almv][j] = antposvnd[almv][j];
-	}
-}
-
-void GVNS::fo_anteriorVND(int almfo)
-{
-	//salva os valores da funcao objetivo anterior
-	fo_al_savevnd[almfo] = fo.fo_al[almfo];
-}
-
-void GVNS::volta_fo_anteriorVND(int almfov)
-{
-	//volta os valores para o vetor da funcao objetivo
-	fo.fo_al[almfov] = fo_al_savevnd[almfov];
-}
-
 float VND::v1_VND(int ch1, float incumbentv1)
 {
-	//Mover chave para seu adjacente
-
 	//localizando chave
 	int cont = 0;
 	int al = 0;
 	int pch = 0;
+	int pos_ch = 0;
 
 	for (int i = 1; i < num_AL; i++)
 	{
@@ -3084,6 +3039,7 @@ float VND::v1_VND(int ch1, float incumbentv1)
 				//encontrou a chave: pegar dados
 				al = i;
 				pch = j;
+				pos_ch = ac.posicaochaves[i][j];
 				break;
 			}
 			else if (ac.posicaochaves[i][j] != 0)
@@ -3095,11 +3051,59 @@ float VND::v1_VND(int ch1, float incumbentv1)
 		}
 	}
 
-	//possibilidades dos vizinhos
+	//possibilidades dos vizinhos mais proximos a candidato de alocação
 	vector<int>adjch;
+	for (int i = pos_ch + 1; i < linha_dados; i++)
+	{
+		if (ps.noi[i] > 999) //protecao
+		{
+			break;
+		}
+		if (ps.candidato_CH[i] == 1)
+		{
+			adjch.push_back(i);
+			break;
+		}
+	}
+	for (int i = pos_ch - 1; i < 1; i--)
+	{
+		if (ps.noi[i] > 999) //protecao
+		{
+			break;
+		}
+		if (ps.candidato_CH[i] == 1)
+		{
+			adjch.push_back(i);
+			break;
+		}
+	}
 
+	//começa a alocação
+	float resultado = 0.0;
+	for (int i = 0; i < adjch.size(); i++)
+	{
+		ac.chaves_anteriores(); //salva chaves anteriores
 
-	
+		//atualiza chaves
+		ac.posicaochaves[al][pch] = adjch[i];
+		ac.chi[al][pch] = ps.noi[adjch[i]];
+		ac.chf[al][pch] = ps.nof[adjch[i]];
+
+		//calcula
+		resultado = fo.calculo_funcao_objetivo(al);
+
+		if (resultado < incumbentv1)
+		{
+			break;
+		}
+		else
+		{
+			ac.volta_chaves_anteriores();
+			ac.secoes_alimentador();
+		}
+	}
+
+	return resultado;
 }
 
 float VND::v2_VND(int ch2, float incumbentv2)
@@ -3110,111 +3114,7 @@ float VND::v2_VND(int ch2, float incumbentv2)
 
 float VND::v3_VND(int GD1, float incumbentv3)
 {
-	int cont = 0; //contador
-	int gd = 0; //o gd que vai mudar
-	int gd_al = 0; //alimentador do GD
-	vector<int>vgd = {}; //vetor posicao de GDs
-	int pos_antGD = 0;
-	int pos_dpsGD = 0;
-
-	float parcialAL = 0.0;
-
-	for (int i = 1; i < num_AL; i++)
-	{
-		for (int j = 1; j < linha_dados; j++)
-		{
-			if (agd.posicaoGD[i][j] != 0)
-			{
-				cont++;
-
-				if (cont == GD1)
-				{
-					//selecionar GD
-					gd = agd.posicaoGD[i][j];
-					gd_al = i;
-
-					bool start = false;
-
-					//pegar o vetor onde pode ser alocado GD
-					vgd.clear();
-					for (int k = 1; k < linha_dados; k++)
-					{
-						//chave condicional para pegar somente no intervalo necessario
-						if(ps.noi[k] < alimentadores[i])
-						{
-							start = false;
-							continue;	
-						}
-						else if (ps.noi[k] > alimentadores[i])
-						{
-							start = false;
-							break;
-						}
-						else
-						{
-							start = true;
-						}
-						
-
-						if (ps.candidato_GD[k] == 1 && start == true)
-						{
-							vgd.push_back(k); //todas as posicoes onde é possivel alocar GD estao aqui
-						}
-						
-					}
-
-					break;
-				}
-			}
-		}
-	}
-
-	//deslocar GD para o vizinho dos vetores
-	for (int k = 0; k < vgd.size(); k++)
-	{
-		if (gd == vgd[k])
-		{
-			// -- possibilidades de alocacao
-			
-			if (k - 1 > -1) //limite inferior
-			{
-				pos_antGD = vgd[k - 1]; //posicao anterior  
-			}
-			if (k + 1 < vgd.size() + 1) //limite superior
-			{
-				pos_dpsGD = vgd[k + 1]; //posicao posterior 
-			}
-		}
-	}
-
-	//com as possibilidades de alocacao para o vizinho colocar o GD
-	int escolha = 0;
-	escolha = rand() % 1; //soteia 0 ou 1D
-
-	if (escolha == 0)
-	{
-		agd.gd_anteriores(); //salvar posicoes do ultimo GD
-
-		//mover 1 GD para a posicao anterior
-		agd.quantGD[gd] = agd.quantGD[gd] - 1; //tirei um gd
-		agd.quantGD[pos_antGD] = agd.quantGD[pos_antGD] + 1; //aumenta 1 gd
-		
-		parcialAL = fo.calculo_funcao_objetivo(gd_al);
-	}
-	else
-	{
-		//escolha é 1
-		agd.gd_anteriores(); //salvar posicoes do ultimo GD
-
-		//mover 1 GD para a posicao anterior
-		agd.quantGD[gd] = agd.quantGD[gd] - 1; //tirei um gd
-		agd.quantGD[pos_dpsGD] = agd.quantGD[pos_dpsGD] + 1; //aumenta 1 gd
-
-		parcialAL = fo.calculo_funcao_objetivo(gd_al);
-
-	}
 	
-	return parcialAL;
 }
 
 float VND::v4_VND(int GD2, float incumbentv4)
@@ -3271,7 +3171,6 @@ inicioVND:
 		goto inicioVND;
 	}
 	
-	/*
 	vnd_current = v4_VND(gd, vnd_incumbent);
 
 	if (vnd_current < vnd_incumbent)
@@ -3283,7 +3182,6 @@ inicioVND:
 
 		goto inicioVND;
 	}
-	*/
 
 	//fim vnd
 	return vnd_incumbent;
