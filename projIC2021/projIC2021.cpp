@@ -309,7 +309,7 @@ void ParametrosSistema::leitura_parametros()
 
 	for (int i = 1; i < linha_dados; i++)
 	{
-		fscanf(arquivo, "%d%d%f%f%f%f%d%d%f%d", &ps.noi[i], &ps.nof[i], &ps.lt_r[i], &ps.lt_x[i], &ps.s_nofr[i], &ps.s_nofq[i], &ps.candidato_aloc[i], &ps.estado_swt_vanila[i], &ps.dist_no[i], &ps.candidato_GD[i], &ps.candidato_CH[i]);
+		fscanf(arquivo, "%d%d%f%f%f%f%d%d%f%d%d", &ps.noi[i], &ps.nof[i], &ps.lt_r[i], &ps.lt_x[i], &ps.s_nofr[i], &ps.s_nofq[i], &ps.candidato_aloc[i], &ps.estado_swt_vanila[i], &ps.dist_no[i], &ps.candidato_GD[i], &ps.candidato_CH[i]);
 	}
 
 	fclose(arquivo);
@@ -3034,20 +3034,19 @@ float VND::v1_VND(int ch1, float incumbentv1)
 	{
 		for (int j = 1; j < linha_dados; j++)
 		{
+			if (ac.posicaochaves[i][j] != 0)
+			{
+				//incrementa contador das chaves
+				cont++;
+			}
 			if (cont == ch1)
 			{
 				//encontrou a chave: pegar dados
 				al = i;
 				pch = j;
 				pos_ch = ac.posicaochaves[i][j];
-				break;
+				cont++; //para nao voltar nesse loop
 			}
-			else if (ac.posicaochaves[i][j] != 0)
-			{
-				//incrementa contador das chaves
-				cont++;
-			}
-			else { continue; }
 		}
 	}
 
@@ -3061,11 +3060,24 @@ float VND::v1_VND(int ch1, float incumbentv1)
 		}
 		if (ps.candidato_CH[i] == 1)
 		{
-			adjch.push_back(i);
-			break;
+			//ver se ja possui chave
+			bool verifica = false;
+			for (int k = 1; k < linha_dados; k++)
+			{
+				if (i == ac.posicaochaves[al][k] && ac.posicaochaves[al][k] != 0)
+				{
+					verifica = true;
+				}
+			}
+			//adiciona ou nao
+			if (!verifica)
+			{
+				adjch.push_back(i);
+				break;
+			}
 		}
 	}
-	for (int i = pos_ch - 1; i < 1; i--)
+	for (int i = pos_ch - 1; i > 1; i--)
 	{
 		if (ps.noi[i] > 999) //protecao
 		{
@@ -3073,8 +3085,21 @@ float VND::v1_VND(int ch1, float incumbentv1)
 		}
 		if (ps.candidato_CH[i] == 1)
 		{
-			adjch.push_back(i);
-			break;
+			//ver se ja possui chave
+			bool verifica = false;
+			for (int k = 1; k < linha_dados; k++)
+			{
+				if (i == ac.posicaochaves[al][k] && ac.posicaochaves[al][k] != 0)
+				{
+					verifica = true;
+				}
+			}
+			//adiciona ou nao
+			if (!verifica)
+			{
+				adjch.push_back(i);
+				break;
+			}
 		}
 	}
 
@@ -3090,7 +3115,7 @@ float VND::v1_VND(int ch1, float incumbentv1)
 		ac.chf[al][pch] = ps.nof[adjch[i]];
 
 		//calcula
-		resultado = fo.calculo_funcao_objetivo(al);
+		//resultado = fo.calculo_funcao_objetivo(al);
 
 		if (resultado < incumbentv1)
 		{
@@ -3106,20 +3131,137 @@ float VND::v1_VND(int ch1, float incumbentv1)
 	return resultado;
 }
 
-float VND::v2_VND(int ch2, float incumbentv2)
+float VND::v2_VND(int gd2, float incumbentv2)
 {
 	
-
+	return 0;
 }
 
-float VND::v3_VND(int GD1, float incumbentv3)
+float VND::v3_VND(int ch3, float incumbentv3)
 {
-	
+	//localizando chave
+	int cont = 0;
+	int al = 0;
+	int pch = 0;
+	int pos_ch = 0;
+
+	for (int i = 1; i < num_AL; i++)
+	{
+		for (int j = 1; j < linha_dados; j++)
+		{
+			if (ac.posicaochaves[i][j] != 0)
+			{
+				//incrementa contador das chaves
+				cont++;
+			}
+			if (cont == ch3)
+			{
+				//encontrou a chave: pegar dados
+				al = i;
+				pch = j;
+				pos_ch = ac.posicaochaves[i][j];
+				cont++; //para nao voltar nesse loop
+			}
+		}
+	}
+
+	//possibilidades dos vizinhos mais proximos a candidato de alocação
+	vector<int>adjch;
+	bool pula = true;
+	for (int i = pos_ch + 1; i < linha_dados; i++)
+	{
+		if (ps.noi[i] > 999) //protecao
+		{
+			break;
+		}
+		if (ps.candidato_CH[i] == 1)
+		{
+			if (pula)
+			{
+				pula = false;
+				continue;
+			}
+			//ver se ja possui chave
+			bool verifica = false;
+			for (int k = 1; k < linha_dados; k++)
+			{
+				if (i == ac.posicaochaves[al][k] && ac.posicaochaves[al][k] != 0)
+				{
+					verifica = true;
+				}
+			}
+			//adiciona ou nao
+			if (!verifica)
+			{
+				adjch.push_back(i);
+				break;
+			}
+		}
+	}
+
+	pula = true;
+	for (int i = pos_ch - 1; i > 1; i--)
+	{
+		if (ps.noi[i] > 999) //protecao
+		{
+			break;
+		}
+		if (ps.candidato_CH[i] == 1)
+		{
+			if (pula)
+			{
+				pula = false;
+				continue;
+			}
+			//ver se ja possui chave
+			bool verifica = false;
+			for (int k = 1; k < linha_dados; k++)
+			{
+				if (i == ac.posicaochaves[al][k] && ac.posicaochaves[al][k] != 0)
+				{
+					verifica = true;
+				}
+			}
+			//adiciona ou nao
+			if (!verifica)
+			{
+				adjch.push_back(i);
+				break;
+			}
+		}
+	}
+
+	//começa a alocação
+	float resultado = 0.0;
+	for (int i = 0; i < adjch.size(); i++)
+	{
+		ac.chaves_anteriores(); //salva chaves anteriores
+
+		//atualiza chaves
+		ac.posicaochaves[al][pch] = adjch[i];
+		ac.chi[al][pch] = ps.noi[adjch[i]];
+		ac.chf[al][pch] = ps.nof[adjch[i]];
+
+		//calcula
+		//resultado = fo.calculo_funcao_objetivo(al);
+
+		if (resultado < incumbentv3)
+		{
+			break;
+		}
+		else
+		{
+			ac.volta_chaves_anteriores();
+			ac.secoes_alimentador();
+		}
+	}
+
+	return resultado;
 }
 
-float VND::v4_VND(int GD2, float incumbentv4)
+float VND::v4_VND(int gd4, float incumbentv4)
 {
-	
+	return 0;
 }
 
 float VND::VND_intensificacao(int ch, int gd, float sol_incumbent)
@@ -3392,50 +3534,6 @@ float RVNS::v3_RVNS(float incumbentmain3)
 
 float RVNS::v4_RVNS(float incumbentmain4)
 {
-	/*
-	//quarta vizinhanca - adiciona uma chave no sistema
-
-	//variaveis locais
-	int nova_ch = 0;
-	bool add = false;
-	int al = 0;
-	float resultado = 0.0;
-
-	//adicionando chave
-	while (!add)
-	{
-		add = true; //assume verdadeiro pois se satisfazer as condicoes
-		nova_ch = rand() % linha_dados + 1;
-
-		//verifica possibilidade e existencia
-		if (ps.candidato_aloc[nova_ch] == 0)
-		{
-			//possibilidade
-			add = false;
-		}
-		else
-		{
-			//existencia
-			for (int i = 1; i < num_AL; i++)
-			{
-				for (int j = 1; j < linha_dados; j++)
-				{
-					if (ac.posicaochaves[i][j] == nova_ch)
-					{
-						add = false;
-					}
-				}
-			}
-		}
-	}
-
-	//incluindo chave no alimentador e vazendo VND para todas as chaves com GDS aleatorios (vizinhanca 3)
-	al = gvns.localizaAL(nova_ch);
-	resultado = rvns.v3_RVNS(incumbentmain4);
-	//retorna o valor encontrado com a vizinhança 3
-	return resultado;
-	*/
-
 	//quarta vizinhança - adiciona uma chave ou um GD no sistema
 
 	//variaveis locais
@@ -3813,7 +3911,7 @@ inicio_alg:
 
 	//calcular valor da FO total
 
-	incumbent_solution = fo.calculo_funcao_objetivo_geral();
+	//incumbent_solution = fo.calculo_funcao_objetivo_geral();
 	cout << "---------------------------------" << endl;
 
 
