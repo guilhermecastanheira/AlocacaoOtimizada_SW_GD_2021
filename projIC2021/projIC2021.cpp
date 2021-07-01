@@ -275,8 +275,10 @@ public:
 	int q_rvns5 = 0;
 
 	float v1_RVNS(float incumbentmain1);
+	float v2_RVNS_AUX(float incumbentmain2, int al);
 	float v2_RVNS(float incumbentmain2);
 	float v3_RVNS(float incumbentmain3);
+	float v3_RVNS_AUX(float incumbentmain3, int al);
 	float v4_RVNS(float incumbentmain4);
 	float v5_RVNS(float incumbentmain5);
 }rvns;
@@ -1762,6 +1764,13 @@ void AlocacaoGD::ajustePOT(complex<float>S[linha_dados], float P[linha_dados], f
 
 void AlocacaoGD::potenciaGD(float ISpv, float PGD[linha_dados], int numGDbarra[linha_dados], int posGD[linha_dados])
 {
+	//zerar vetor potencia na barra
+	for (int i = 1; i < linha_dados; i++)
+	{
+		PGD[i] = 0;
+	}
+
+	//calcular potencia na barra do gd
 	for (int i = 1; i < linha_dados; i++)
 	{
 		if (posGD[i] != 0)
@@ -3119,7 +3128,7 @@ float VND::v1_VND(int ch1, float incumbentv1)
 
 		if (resultado < incumbentv1)
 		{
-			break;
+			return resultado;
 		}
 		else
 		{
@@ -3128,13 +3137,114 @@ float VND::v1_VND(int ch1, float incumbentv1)
 		}
 	}
 
-	return resultado;
+	return incumbentv1;
 }
 
 float VND::v2_VND(int gd2, float incumbentv2)
 {
+	//mover GD para a posição vizinha
+
+	//localiza GD
+	int al = 0;
+	int pgd = 0;
+	int pos_gd = 0;
+	int cont = 0;
+	for (int i = 1; i < num_AL; i++)
+	{
+		for (int j = 1; j < linha_dados; j++)
+		{
+			if (ac.posicaochaves[i][j] != 0)
+			{
+				//incrementa contador das chaves
+				cont++;
+			}
+			if (cont == gd2)
+			{
+				//encontrou a chave: pegar dados
+				al = i;
+				pgd = j;
+				pos_gd = agd.posicaoGD[al][pgd];
+				cont++; //para nao voltar nesse loop
+			}
+		}
+	}
+
+	//possibilidades dos vizinhos mais proximos a candidato de alocação
+	vector<int>adjgd;
+	for (int i = pos_gd + 1; i < linha_dados; i++)
+	{
+		if (ps.noi[i] > 999) //protecao
+		{
+			break;
+		}
+		if (ps.candidato_GD[i] == 1)
+		{
+			//ver se ja possui gd
+			bool verifica = false;
+			for (int k = 1; k < linha_dados; k++)
+			{
+				if (i == agd.posicaoGD[al][k] && agd.posicaoGD[al][k] != 0)
+				{
+					verifica = true;
+				}
+			}
+			//adiciona ou nao
+			if (!verifica)
+			{
+				adjgd.push_back(i);
+				break;
+			}
+		}
+	}
+	for (int i = pos_gd - 1; i > 1; i--)
+	{
+		if (ps.noi[i] > 999) //protecao
+		{
+			break;
+		}
+		if (ps.candidato_GD[i] == 1)
+		{
+			//ver se ja possui chave
+			bool verifica = false;
+			for (int k = 1; k < linha_dados; k++)
+			{
+				if (i == agd.posicaoGD[al][k] && agd.posicaoGD[al][k] != 0)
+				{
+					verifica = true;
+				}
+			}
+			//adiciona ou nao
+			if (!verifica)
+			{
+				adjgd.push_back(i);
+				break;
+			}
+		}
+	}
 	
-	return 0;
+	//começa a alocação dos GDs
+	float resultado = 0.0;
+	for (int i = 0; i < adjgd.size(); i++)
+	{
+		agd.gd_anteriores(); //salva gd anteriores
+
+		//atualiza chaves
+		agd.posicaoGD[al][pgd] = adjgd[i];
+		agd.quantGD[adjgd[i]] = agd.quantGD[pos_gd];
+		agd.quantGD[pos_gd] = 0;
+
+		//calcula
+		//resultado = fo.calculo_funcao_objetivo(al);
+		if (resultado < incumbentv2)
+		{
+			return resultado;
+		}
+		else
+		{
+			agd.volta_gd_anteriores();
+		}
+	}
+	return incumbentv2;
 }
 
 float VND::v3_VND(int ch3, float incumbentv3)
@@ -3247,7 +3357,7 @@ float VND::v3_VND(int ch3, float incumbentv3)
 
 		if (resultado < incumbentv3)
 		{
-			break;
+			return resultado;
 		}
 		else
 		{
@@ -3256,7 +3366,7 @@ float VND::v3_VND(int ch3, float incumbentv3)
 		}
 	}
 
-	return resultado;
+	return incumbentv3;
 }
 
 float VND::v4_VND(int gd4, float incumbentv4)
@@ -3336,13 +3446,10 @@ float RVNS::v1_RVNS(float incumbentmain1)
 	int qch = 0;
 	int qgd = 0;
 	int numero = 0;
-	float incumbentv1 = 0.0;
 	float resultadov1 = 0.0;
 
-	incumbentv1 = incumbentmain1;
-
-	//sorteios - n é limitado entre 1 e 10
-	numero = (rand() % 10) + 1;
+	//sorteios - n é limitado entre 1 e 5
+	numero = (rand() % 5) + 1;
 
 	//sorteando
 	for (int i = 0; i < numero; i++)
@@ -3350,69 +3457,26 @@ float RVNS::v1_RVNS(float incumbentmain1)
 		qch = rand() % ac.numch_SIS + 1;
 		qgd = rand() % agd.qntGD_SIS + 1;
 
-		resultadov1 = vnd.VND_intensificacao(qch, qgd, incumbentv1);
+		resultadov1 = vnd.VND_intensificacao(qch, qgd, incumbentmain1);
 
-		if (resultadov1 < incumbentv1)
+		if (resultadov1 < incumbentmain1)
 		{
-			incumbentv1 = resultadov1;
+			return resultadov1;
 		}
 	}
-
-	return incumbentv1;
+	return incumbentmain1; //nao encontra melhor solução
 }
 
 float RVNS::v2_RVNS(float incumbentmain2)
 {
-	/*
-	//segunda vizinhança - manter chaves e sortear todos os GDS de um alimentador
-
-	//variaveis locais
-	int gd = 0;
-	int ch = 0;
-	int al = 0;
-	float incumbent = 0.0;
-	float resultado = 0.0;
-
-	//inicio
-	incumbent = incumbentmain2;
-	al = (rand() % num_AL-1) + 1;
-	ac.chaves_anteriores();
-	agd.gd_anteriores();
-	gvns.sorteioGDs(agd.numgd_AL[al], fxp.camadaAL[al], agd.posicaoGD[al], al, agd.quantGD);
-
-	//execucao vizinhança
-	for (int i = 1; i < agd.numgd_AL[al]; i++)
-	{
-		ch = rand() % ac.numch_AL[al] + 1;//chave aleatoria para acompanhar o metodo
-		resultado = vnd.VND_intensificacao(ch, gd, incumbent);
-		if (resultado < incumbent) { incumbent = resultado; }
-	}
-
-	if (incumbent < incumbentmain2)
-	{
-		return incumbent;
-	}
-	else
-	{
-		agd.volta_gd_anteriores();
-		ac.volta_chaves_anteriores();
-		return incumbentmain2;
-	}
-	*/
-
-	//segunda vizinhança, escolher um alimentador e fazer o VND para as chaves desse alimentador com gds aleatorios
-
 	//variaveis locais
 	int al = 0;
 	int chaves_i = 0;
 	int chaves_f = 0;
 	int gd = 0;
 	float resultadov2 = 0.0;
-	float incumbentv2 = 0.0;
 
 	//executar vizinhança
-	incumbentv2 = incumbentmain2;
-
 	al = rand() % num_AL + 1;
 
 	for (int i = 1; i < num_AL; i++)
@@ -3435,70 +3499,67 @@ float RVNS::v2_RVNS(float incumbentmain2)
 	{
 		gd = rand() % agd.qntGD_SIS + 1;
 
-		resultadov2 = vnd.VND_intensificacao(i, gd, incumbentv2);
+		resultadov2 = vnd.VND_intensificacao(i, gd, incumbentmain2);
 
-		if (resultadov2 < incumbentv2)
+		if (resultadov2 < incumbentmain2)
 		{
-			incumbentv2 = resultadov2;
+			return resultadov2;
 		}
 	}
-	
-	return incumbentv2;
-	
+
+	return incumbentmain2;
+}
+
+float RVNS::v2_RVNS_AUX(float incumbentmain2, int al)
+{
+	//variaveis locais
+	int chaves_i = 0;
+	int chaves_f = 0;
+	int gd = 0;
+	float resultadov2 = 0.0;
+
+	//executar vizinhança
+	for (int i = 1; i < num_AL; i++)
+	{
+		if (i < al)
+		{
+			chaves_i += ac.numch_AL[i];
+		}
+		else if (i == al)
+		{
+			chaves_f = chaves_i + ac.numch_AL[i];
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	for (int i = chaves_i; i < chaves_f; i++)
+	{
+		gd = rand() % agd.qntGD_SIS + 1;
+
+		resultadov2 = vnd.VND_intensificacao(i, gd, incumbentmain2);
+
+		if (resultadov2 < incumbentmain2)
+		{
+			return resultadov2;
+		}
+	}
+
+	return incumbentmain2;
 }
 
 float RVNS::v3_RVNS(float incumbentmain3)
 {
-	/*
-	//terceira vizinhança - manter gds e sortear chaves
-
-	//variaveis locais
-	int ch = 0;
-	int gd = 0;
-	int al = 0;
-	float incumbent = 0.0;
-	float resultado = 0.0;
-
-	//inicio
-	incumbent = incumbentmain3;
-	ac.chaves_anteriores();
-	agd.gd_anteriores();
-	al = (rand() % num_AL-1) + 1;
-	gvns.sorteiochaves(ac.numch_AL[al], fxp.camadaAL[al], ac.posicaochaves[al], alimentadores[al]);
-
-	//execucao vizinhança
-	for (int i = 1; i < ac.numch_AL[al]; i++)
-	{
-		gd = rand() % agd.numgd_AL[al] + 1;//chave aleatoria para acompanhar o metodo
-		resultado = vnd.VND_intensificacao(ch, gd, incumbent);
-		if (resultado < incumbent) { incumbent = resultado; }
-	}
-
-	if (incumbent < incumbentmain3)
-	{
-		return incumbent;
-	}
-	else
-	{
-		agd.volta_gd_anteriores();
-		ac.volta_chaves_anteriores();
-		return incumbentmain3;
-	}
-	*/
-
-	//terceira vizinhança - fazer semelhante a segunda vizinhança, porem com GD
-	
 	//variaveis locais
 	int al = 0;
 	int gd_i = 0;
 	int gd_f = 0;
 	int ch = 0;
 	float resultadov3 = 0.0;
-	float incumbentv3 = 0.0;
 
 	//executar vizinhança
-	incumbentv3 = incumbentmain3;
-
 	al = rand() % num_AL + 1;
 
 	for (int i = 1; i < num_AL; i++)
@@ -3521,267 +3582,192 @@ float RVNS::v3_RVNS(float incumbentmain3)
 	{
 		ch = rand() % ac.numch_SIS + 1;
 
-		resultadov3 = vnd.VND_intensificacao(ch, i, incumbentv3);
+		resultadov3 = vnd.VND_intensificacao(ch, i, incumbentmain3);
 
-		if (resultadov3 < incumbentv3)
+		if (resultadov3 < incumbentmain3)
 		{
-			incumbentv3 = resultadov3;
+			return resultadov3;
 		}
 	}
 
-	return incumbentv3;
+	return incumbentmain3;
+}
+
+float RVNS::v3_RVNS_AUX(float incumbentmain3, int al)
+{
+	//variaveis locais
+	int gd_i = 0;
+	int gd_f = 0;
+	int ch = 0;
+	float resultadov3 = 0.0;
+
+	//executar vizinhança
+	for (int i = 1; i < num_AL; i++)
+	{
+		if (i < al)
+		{
+			gd_i += agd.numgd_AL[i];
+		}
+		else if (i == al)
+		{
+			gd_f = gd_i + agd.numgd_AL[i];
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	for (int i = gd_i; i < gd_f; i++)
+	{
+		ch = rand() % ac.numch_SIS + 1;
+
+		resultadov3 = vnd.VND_intensificacao(ch, i, incumbentmain3);
+
+		if (resultadov3 < incumbentmain3)
+		{
+			return resultadov3;
+		}
+	}
+
+	return incumbentmain3;
 }
 
 float RVNS::v4_RVNS(float incumbentmain4)
 {
-	//quarta vizinhança - adiciona uma chave ou um GD no sistema
+	//quarta vizinhança - adiciona um GD
 
 	//variaveis locais
 	int opcao = 0;
 	int eqpto = 0;
 	int al = 0;
-	float incumbentv4 = 0.0;
-	float resultadov4 = 0.0;
 
 	//executa vizinhança
-	opcao = rand() % 100;
+	//adiciona GD
+inicioopGD:
+	eqpto = (rand() % linha_dados - 1) + 1;
 
-	if (opcao < 60)
+	if (ps.candidato_GD[eqpto] == 0 || agd.quantGD[eqpto] >= maxGD)
 	{
-		//adiciona GD
-	inicioopGD:
-		eqpto = (rand() % linha_dados - 1) + 1;
+		goto inicioopGD;
+	}
 
-		if (ps.candidato_GD[eqpto] == 0 || agd.quantGD[eqpto] >= maxGD)
+	//identifica o alimentador
+	al = gvns.localizaAL(eqpto);
+
+	//adiciona GD
+	for (int i = 1; i < linha_dados; i++)
+	{
+		if (agd.posicaoGD[al][i] == 0)
 		{
-			goto inicioopGD;
+			agd.posicaoGD[al][i] = eqpto; //adiciona gd na posicao
+			agd.quantGD[eqpto]++;
+			break;
 		}
+	}
+	agd.numgd_AL[al]++; //adiciona o gd nos contadores
+	agd.qntGD_SIS++;
 
-		//identifica o alimentador
-		al = gvns.localizaAL(eqpto);
+	//executar vizinhança 3 no alimentador que o gd foi selecionada
+	float resultado = 0.0;
+	resultado = rvns.v3_RVNS_AUX(incumbentmain4, al);
 
-		//adiciona GD
-		for (int i = 1; i < linha_dados; i++)
-		{
-			if (agd.posicaoGD[al][i] == 0)
-			{
-				agd.posicaoGD[al][i] = eqpto; //adiciona gd na posicao
-				agd.quantGD[eqpto]++;
-				break;
-			}
-		}
-		agd.numgd_AL[al]++; //adiciona o gd nos contadores
-		agd.qntGD_SIS++;
-
-		//executar vizinhança 3 no alimentador que o gd foi selecionada
-		incumbentv4 = incumbentmain4;
-
-		int al = 0;
-		int gd_i = 0;
-		int gd_f = 0;
-		int ch = 0;
-
-		for (int i = 1; i < num_AL; i++)
-		{
-			if (i < al)
-			{
-				gd_i += agd.numgd_AL[i];
-			}
-			else if (i == al)
-			{
-				gd_f = gd_i + agd.numgd_AL[i];
-			}
-			else
-			{
-				break;
-			}
-		}
-
-		for (int i = gd_i; i < gd_f; i++)
-		{
-			ch = rand() % ac.numch_SIS + 1;
-
-			resultadov4 = vnd.VND_intensificacao(ch, i, incumbentv4);
-
-			if (resultadov4 < incumbentv4)
-			{
-				incumbentv4 = resultadov4;
-			}
-		}
-
-		if (incumbentv4 < incumbentmain4)
-		{
-			//retorna valor
-			return incumbentv4;
-		}
-		else
-		{
-			//exclui GD
-			for (int i = 1; i < linha_dados; i++)
-			{
-				if (agd.posicaoGD[al][i+1] == 0)
-				{
-					agd.posicaoGD[al][i] = 0; //exclui gd na posicao
-					agd.quantGD[eqpto]--;
-					break;
-				}
-			}
-			agd.numgd_AL[al]--; //retira o gd nos contadores
-			agd.qntGD_SIS--;
-
-			//retorna valor anterior
-			return incumbentmain4;
-		}
-
+	if (resultado < incumbentmain4)
+	{
+		//retorna valor
+		return resultado;
 	}
 	else
 	{
-		//adiciona Chave de manobra
-	inicioopCH:
-		eqpto = (rand() % linha_dados - 1) + 1;
-
-		if (ps.candidato_aloc[eqpto] == 0)
-		{
-			goto inicioopGD;
-		}
-		else
-		{
-			for (int i = 1; i < num_AL; i++)
-			{
-				for (int j = 1; j < linha_dados; j++)
-				{
-					if (ac.posicaochaves[i][j] == eqpto)
-					{
-						goto inicioopCH;
-					}
-				}
-			}
-		}
-
-		//identifica o alimentador
-		al = gvns.localizaAL(eqpto);
-
-		//adciona a chave
+		//exclui GD
 		for (int i = 1; i < linha_dados; i++)
 		{
-			if (ac.posicaochaves[al][i] == 0)
+			if (agd.posicaoGD[al][i+1] == 0)
 			{
-				ac.posicaochaves[al][i] = eqpto;
-				ac.chi[al][i] = ps.noi[ac.posicaochaves[al][i]];
-				ac.chf[al][i] = ps.nof[ac.posicaochaves[al][i]];
-				ac.numch_AL[al]++;
-				ac.numch_SIS++;
+				agd.posicaoGD[al][i] = 0; //exclui gd na posicao
+				agd.quantGD[eqpto]--;
 				break;
 			}
 		}
+		agd.numgd_AL[al]--; //retira o gd nos contadores
+		agd.qntGD_SIS--;
 
-		//executa a vizinhança 2 no alimentador que a chave foi adicionada
-		incumbentv4 = incumbentmain4;
-
-		int chaves_i = 0, chaves_f = 0, gd = 0;
-
-		for (int i = 1; i < num_AL; i++)
-		{
-			if (i < al)
-			{
-				chaves_i += ac.numch_AL[i];
-			}
-			else if (i == al)
-			{
-				chaves_f = chaves_i + ac.numch_AL[i];
-			}
-			else
-			{
-				break;
-			}
-		}
-
-		for (int i = chaves_i; i < chaves_f; i++)
-		{
-			gd = rand() % agd.qntGD_SIS + 1;
-
-			resultadov4 = vnd.VND_intensificacao(i, gd, incumbentv4);
-
-			if (resultadov4 < incumbentv4)
-			{
-				incumbentv4 = resultadov4;
-			}
-		}
-
-		if (incumbentv4 < incumbentmain4)
-		{
-			//retorna valor
-			return incumbentv4;
-		}
-		else
-		{
-			//exclui chave
-			for (int i = 1; i < linha_dados; i++)
-			{
-				if (ac.posicaochaves[al][i + 1] == 0)
-				{
-					ac.posicaochaves[al][i] = 0;
-					ac.chi[al][i] = 0;
-					ac.chf[al][i] = 0;
-					ac.numch_AL[al]--;
-					ac.numch_SIS--;
-					break;
-				}
-			}
-
-			return incumbentmain4;
-		}
-		
+		//retorna valor anterior
+		return incumbentmain4;
 	}
-
 }
 
 float RVNS::v5_RVNS(float incumbentmain5)
 {
-	/*
-	//quinta vizinhança - adiciona um gd no sistema
-	//variaveis locais
-	int novo_gd = 0;
-	bool add = false;
-	int al = 0;
-	float resultado = 0.0;
+	int eqpto = 0;
 
-	//adicionando chave
-	while (!add)
+	//adiciona Chave de manobra
+inicioopCH:
+	eqpto = (rand() % linha_dados - 1) + 1;
+
+	if (ps.candidato_aloc[eqpto] == 0)
 	{
-		add = true; //assume verdadeiro pois se satisfazer as condicoes
-		novo_gd = rand() % linha_dados + 1;
-
-		//verifica possibilidade e existencia
-		if (ps.candidato_GD[novo_gd] == 0)
+		goto inicioopCH;
+	}
+	else
+	{
+		for (int i = 1; i < num_AL; i++)
 		{
-			//possibilidade
-			add = false;
-		}
-		else
-		{
-			//existencia
-			for (int i = 1; i < num_AL; i++)
+			for (int j = 1; j < linha_dados; j++)
 			{
-				for (int j = 1; j < linha_dados; j++)
+				if (ac.posicaochaves[i][j] == eqpto)
 				{
-					if (agd.posicaoGD[i][j] == novo_gd)
-					{
-						add = false;
-					}
+					goto inicioopCH;
 				}
 			}
 		}
 	}
 
-	//incluindo GD no alimentador e vazendo VND para todas os GDs com chaves aleatorias (vizinhanca 2)
-	al = gvns.localizaAL(novo_gd);
-	resultado = rvns.v2_RVNS(incumbentmain5);
-	//retorna o valor encontrado com a vizinhança 2
-	return resultado;
-	*/
+	//identifica o alimentador
+	int al = 0;
+	al = gvns.localizaAL(eqpto);
 
-	return incumbentmain5;
+	//adciona a chave
+	for (int i = 1; i < linha_dados; i++)
+	{
+		if (ac.posicaochaves[al][i] == 0)
+		{
+			ac.posicaochaves[al][i] = eqpto;
+			ac.chi[al][i] = ps.noi[ac.posicaochaves[al][i]];
+			ac.chf[al][i] = ps.nof[ac.posicaochaves[al][i]];
+			ac.numch_AL[al]++;
+			ac.numch_SIS++;
+			break;
+		}
+	}
+
+	//executa a vizinhança 2 do RVNS no alimentador que a chave foi adicionada
+	float resultado = 0.0;
+	resultado = rvns.v2_RVNS_AUX(incumbentmain5, al);
+	
+	if (resultado < incumbentmain5)
+	{
+		//retorna valor
+		return resultado;
+	}
+	else
+	{
+		//exclui chave
+		for (int i = 1; i < linha_dados; i++)
+		{
+			if (ac.posicaochaves[al][i + 1] == 0)
+			{
+				ac.posicaochaves[al][i] = 0;
+				ac.chi[al][i] = 0;
+				ac.chf[al][i] = 0;
+				ac.numch_AL[al]--;
+				ac.numch_SIS--;
+				break;
+			}
+		}
+
+		return incumbentmain5; //nao obteve melhor resultado
+	}
 }
 
 //############################################################################################
@@ -4028,7 +4014,7 @@ metaheuristicGVNS:
 	cout << "\n";
 
 	//GDS Finais
-	cout << "GDs Iniciais:" << endl;
+	cout << "GDs Finais" << endl;
 	cout << "\n";
 	cout << "Barras: ";
 	for (int i = 1; i < num_AL; i++)
