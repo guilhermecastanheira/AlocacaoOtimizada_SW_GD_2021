@@ -2342,6 +2342,11 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 	for (int i = 1; i < num_AL; i++)
 	{
 		resultado_FO += fo_al[i];
+		
+		if (fo_al < 0)
+		{
+			cout << "!! Alerta de zero no alimentador: " << p_AL << endl;
+		}
 	}
 	
 	return resultado_FO;
@@ -3124,7 +3129,7 @@ float VND::v1_VND(int ch1, float incumbentv1)
 		ac.chf[al][pch] = ps.nof[adjch[i]];
 
 		//calcula
-		//resultado = fo.calculo_funcao_objetivo(al);
+		resultado = fo.calculo_funcao_objetivo(al);
 
 		if (resultado < incumbentv1)
 		{
@@ -3153,7 +3158,7 @@ float VND::v2_VND(int gd2, float incumbentv2)
 	{
 		for (int j = 1; j < linha_dados; j++)
 		{
-			if (ac.posicaochaves[i][j] != 0)
+			if (agd.posicaoGD[i][j] != 0)
 			{
 				//incrementa contador das chaves
 				cont++;
@@ -3228,13 +3233,13 @@ float VND::v2_VND(int gd2, float incumbentv2)
 	{
 		agd.gd_anteriores(); //salva gd anteriores
 
-		//atualiza chaves
+		//atualiza gds
 		agd.posicaoGD[al][pgd] = adjgd[i];
 		agd.quantGD[adjgd[i]] = agd.quantGD[pos_gd];
 		agd.quantGD[pos_gd] = 0;
 
 		//calcula
-		//resultado = fo.calculo_funcao_objetivo(al);
+		resultado = fo.calculo_funcao_objetivo(al);
 		if (resultado < incumbentv2)
 		{
 			return resultado;
@@ -3353,7 +3358,7 @@ float VND::v3_VND(int ch3, float incumbentv3)
 		ac.chf[al][pch] = ps.nof[adjch[i]];
 
 		//calcula
-		//resultado = fo.calculo_funcao_objetivo(al);
+		resultado = fo.calculo_funcao_objetivo(al);
 
 		if (resultado < incumbentv3)
 		{
@@ -3371,7 +3376,124 @@ float VND::v3_VND(int ch3, float incumbentv3)
 
 float VND::v4_VND(int gd4, float incumbentv4)
 {
-	return 0;
+	//mover GD para a posição vizinha das vizinhas
+
+	//localiza GD
+	int al = 0;
+	int pgd = 0;
+	int pos_gd = 0;
+	int cont = 0;
+	for (int i = 1; i < num_AL; i++)
+	{
+		for (int j = 1; j < linha_dados; j++)
+		{
+			if (agd.posicaoGD[i][j] != 0)
+			{
+				//incrementa contador de gds
+				cont++;
+			}
+			if (cont == gd4)
+			{
+				//encontrou a chave: pegar dados
+				al = i;
+				pgd = j;
+				pos_gd = agd.posicaoGD[al][pgd];
+				cont++; //para nao voltar nesse loop
+			}
+		}
+	}
+
+	//possibilidades dos vizinhos mais proximos a candidato de alocação
+	vector<int>adjgd;
+	bool pula = true;
+	for (int i = pos_gd + 1; i < linha_dados; i++)
+	{
+		if (ps.noi[i] > 999) //protecao
+		{
+			break;
+		}
+		if (ps.candidato_GD[i] == 1)
+		{
+			if (pula)
+			{
+				pula = false;
+				continue;
+			}
+			//ver se ja possui chave
+			bool verifica = false;
+			for (int k = 1; k < linha_dados; k++)
+			{
+				if (i == agd.posicaoGD[al][k] && agd.posicaoGD[al][k] != 0)
+				{
+					verifica = true;
+				}
+			}
+			//adiciona ou nao
+			if (!verifica)
+			{
+				adjgd.push_back(i);
+				break;
+			}
+		}
+	}
+
+	pula = true;
+	for (int i = pos_gd - 1; i > 1; i--)
+	{
+		if (ps.noi[i] > 999) //protecao
+		{
+			break;
+		}
+		if (ps.candidato_GD[i] == 1)
+		{
+			if (pula)
+			{
+				pula = false;
+				continue;
+			}
+			//ver se ja possui chave
+			bool verifica = false;
+			for (int k = 1; k < linha_dados; k++)
+			{
+				if (i == agd.posicaoGD[al][k] && agd.posicaoGD[al][k] != 0)
+				{
+					verifica = true;
+				}
+			}
+			//adiciona ou nao
+			if (!verifica)
+			{
+				adjgd.push_back(i);
+				break;
+			}
+		}
+	}
+
+	//começa a alocação
+	float resultado = 0.0;
+	for (int i = 0; i < adjgd.size(); i++)
+	{
+		ac.chaves_anteriores(); //salva chaves anteriores
+
+		//atualiza gds
+		agd.posicaoGD[al][pgd] = adjgd[i];
+		agd.quantGD[adjgd[i]] = agd.quantGD[pos_gd];
+		agd.quantGD[pos_gd] = 0;
+
+		//calcula
+		resultado = fo.calculo_funcao_objetivo(al);
+
+		if (resultado < incumbentv4)
+		{
+			return resultado;
+		}
+		else
+		{
+			agd.volta_gd_anteriores();
+		}
+	}
+
+	return incumbentv4;
 }
 
 float VND::VND_intensificacao(int ch, int gd, float sol_incumbent)
@@ -3897,7 +4019,7 @@ inicio_alg:
 
 	//calcular valor da FO total
 
-	//incumbent_solution = fo.calculo_funcao_objetivo_geral();
+	incumbent_solution = fo.calculo_funcao_objetivo_geral();
 	cout << "---------------------------------" << endl;
 
 
