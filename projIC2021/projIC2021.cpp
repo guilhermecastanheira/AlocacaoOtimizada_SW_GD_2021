@@ -46,8 +46,7 @@ int alimentadores[num_AL] = { 0, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007 
 
 #define custokwh_naorenovavel 0.17 //em dolar
 #define custokwh_renovavel 0.05 //em dolar
-#define custokwh_falta 
-#define custoGD 5000 //em dolar - gd
+#define custoGD 4800 //em dolar - gd
 #define custoSW 1150 //em dolar - chave de manobra com manutenção
 
 //Caracteristicas Fluxo de Potencia ------------------------------------
@@ -289,6 +288,8 @@ public:
 
 	int q_vnd1 = 0;
 	int q_vnd2 = 0;
+	int q_vnd3 = 0;
+	int q_vnd4 = 0;
 
 	float VND_intensificacao(int ch, int gd, float sol_incumbent);
 	float v1_VND(int ch1, float incumbentv1); //mover para adjacente
@@ -1863,7 +1864,7 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 	
 	
 	int w = p_AL; //atribui para os calculos
-	cout << "\n\t\t\talimentador:" << p_AL << endl;
+	//cout << "\n\t\t\talimentador:" << p_AL << endl;
 	//barras do alimentador w
 	barras.clear();
 	for (int q = 1; q < linha_dados; q++)
@@ -3515,7 +3516,7 @@ inicioVND:
 		vnd_incumbent = vnd_current;
 		q_vnd1++;
 
-		cout << "\t _ 1-VND: " << vnd_incumbent << endl;
+		//cout << "\t _ 1-VND: " << vnd_incumbent << endl;
 
 		goto inicioVND;
 	}
@@ -3527,7 +3528,7 @@ inicioVND:
 		vnd_incumbent = vnd_current;
 		q_vnd2++;
 
-		cout << "\t _ 2-VND: " << vnd_incumbent << endl;
+		//cout << "\t _ 2-VND: " << vnd_incumbent << endl;
 
 		goto inicioVND;
 	}
@@ -3538,9 +3539,9 @@ inicioVND:
 	if (vnd_current < vnd_incumbent)
 	{
 		vnd_incumbent = vnd_current;
-		q_vnd2++;
+		q_vnd3++;
 
-		cout << "\t _ 2-VND: " << vnd_incumbent << endl;
+		//cout << "\t _ 3-VND: " << vnd_incumbent << endl;
 
 		goto inicioVND;
 	}
@@ -3550,9 +3551,9 @@ inicioVND:
 	if (vnd_current < vnd_incumbent)
 	{
 		vnd_incumbent = vnd_current;
-		q_vnd2++;
+		q_vnd4++;
 
-		cout << "\t _ 4-VND: " << vnd_incumbent << endl;
+		//cout << "\t _ 4-VND: " << vnd_incumbent << endl;
 
 		goto inicioVND;
 	}
@@ -3827,7 +3828,7 @@ float RVNS::v5_RVNS(float incumbentmain5)
 inicioopCH:
 	eqpto = (rand() % linha_dados - 1) + 1;
 
-	if (ps.candidato_aloc[eqpto] == 0)
+	if (ps.candidato_CH[eqpto] == 0)
 	{
 		goto inicioopCH;
 	}
@@ -3890,6 +3891,41 @@ inicioopCH:
 
 		return incumbentmain5; //nao obteve melhor resultado
 	}
+}
+
+//############################################################################################
+
+void DELETA()
+{
+	//deleta todas as variaveis da solução para começar uma nova simulação
+	for (int i = 0; i < num_AL; i++)
+	{
+		fo.fo_al[i] = 0;
+		fo.fo_al_save[i] = 0;
+		ac.numch_AL[i] = 0;
+		agd.numgd_AL[i] = 0;
+
+		for (int j = 0; j < linha_dados; j++)
+		{
+			
+			ac.posicaochaves[i][j] = 0;
+			ac.antchf[i][j] = 0;
+			ac.antchi[i][j] = 0;
+			ac.antpos[i][j] = 0;
+			ac.chf[i][j] = 0;
+			ac.chi[i][j] = 0;
+			
+
+			
+			agd.antGD[i][j] = 0;
+			agd.posicaoGD[i][j] = 0;
+			agd.quantGD[j] = 0;
+			agd.ant_quantGD[j] = 0;
+		}
+	}
+
+	agd.qntGD_SIS = 0;
+	ac.numch_SIS = 0;
 }
 
 //############################################################################################
@@ -4038,11 +4074,11 @@ nmgvns:
 
 	itGVNS++;
 	cout << "Processo de parada - " << itGVNS << "/" << criterio_parada << endl;
-	cout << "\n";
+	//cout << "\n";
 
 metaheuristicGVNS:
 
-	cout << "1. \n";
+	//cout << "1. \n";
 	current_solution = rvns.v1_RVNS(incumbent_solution);
 
 	if (current_solution < incumbent_solution)
@@ -4055,7 +4091,7 @@ metaheuristicGVNS:
 		goto metaheuristicGVNS;
 	}
 
-	cout << "2. \n";
+	//cout << "2. \n";
 	current_solution = rvns.v2_RVNS(incumbent_solution);
 
 	if (current_solution < incumbent_solution)
@@ -4068,7 +4104,7 @@ metaheuristicGVNS:
 		goto metaheuristicGVNS;
 	}
 
-	cout << "3. \n";
+	//cout << "3. \n";
 	current_solution = rvns.v3_RVNS(incumbent_solution);
 
 	if (current_solution < incumbent_solution)
@@ -4081,7 +4117,7 @@ metaheuristicGVNS:
 		goto metaheuristicGVNS;
 	}
 
-	cout << "4. \n";
+	//cout << "4. \n";
 	current_solution = rvns.v4_RVNS(incumbent_solution);
 
 	if (current_solution < incumbent_solution)
@@ -4094,7 +4130,7 @@ metaheuristicGVNS:
 		goto metaheuristicGVNS;
 	}
 
-	cout << ". \n";
+	//cout << "5. \n";
 	current_solution = rvns.v5_RVNS(incumbent_solution);
 
 	if (current_solution < incumbent_solution)
@@ -4160,25 +4196,33 @@ metaheuristicGVNS:
 	cout << "rvns 2: " << rvns.q_rvns2 << endl;
 	cout << "rvns 3: " << rvns.q_rvns3 << endl;
 	cout << "rvns 4: " << rvns.q_rvns4 << endl;
+	cout << "rvns 5:" << rvns.q_rvns5 << endl;
 	cout << "vnd 1: " << vnd.q_vnd1 << endl;
 	cout << "vnd 2: " << vnd.q_vnd2 << endl;
+	cout << "vnd 3: " << vnd.q_vnd3 << endl;
+	cout << "vnd 4: " << vnd.q_vnd4 << endl;
 	cout << "\n";
 
 	//fluxo de potencia:
-	cout << "Numero de fluxo de potencia da simulacao: " << fxp.contadorFXP << endl;
-	cout << "\n";
+	//cout << "Numero de fluxo de potencia da simulacao: " << fxp.contadorFXP << endl;
+	//cout << "\n";
 
 	//Solucao final
 	cout << "Solucao otima: " << incumbent_solution << endl;
 	cout << "\n\n";
 
-	cout << "##########################################################################################################################" << endl;
+	cout << "#######################################################################################################" << endl;
 	cout << "\n\n";
 
-	if (simulacao < numero_simulacoes) { goto inicio_alg; }
+	if (simulacao < numero_simulacoes) 
+	{
+		//reseta solução e volta para o começo do algoritmo
+		DELETA();
+		goto inicio_alg; 
+	}
 
 	cout << "\n";
-	cout << "FIM" << endl;
+	cout << "________________ FIM." << endl;
 
 	return 0;
 }
