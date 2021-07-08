@@ -2124,11 +2124,6 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 					}
 				}
 
-
-				operacaoILHA = agd.opILHA(ac.secoes_chaves[w], ac.adjacente_chaves[w], agd.posicaoGD[w], alimentadores[w], j);
-
-				ps.leitura_parametros();
-				fxp.fluxo_potencia();
 				//ajustes para o cenario
 				agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
 
@@ -2136,6 +2131,11 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 
 				ps.somatorio_potencia();
 				ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
+
+				operacaoILHA = agd.opILHA(ac.secoes_chaves[w], ac.adjacente_chaves[w], agd.posicaoGD[w], alimentadores[w], j);
+
+				ps.leitura_parametros();
+				fxp.fluxo_potencia();
 			}
 			else
 			{
@@ -2649,11 +2649,6 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 						}
 					}
 
-				
-					operacaoILHA = agd.opILHA(ac.secoes_chaves[w], ac.adjacente_chaves[w], agd.posicaoGD[w], alimentadores[w], j);
-
-					ps.leitura_parametros();
-					fxp.fluxo_potencia();
 					//ajustes para o cenario
 					agd.potenciaGD(ps.cenario_is[i2], agd.GDbarra, agd.quantGD, agd.posicaoGD[w]); //ajusta potencia do GD
 
@@ -2661,6 +2656,11 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 
 					ps.somatorio_potencia();
 					ps.potencia_al = ps.potenciaalimentador(ac.adjacente_chaves[w][1]); //toda a potencia do alimentador
+
+					operacaoILHA = agd.opILHA(ac.secoes_chaves[w], ac.adjacente_chaves[w], agd.posicaoGD[w], alimentadores[w], j);
+
+					ps.leitura_parametros();
+					fxp.fluxo_potencia();
 				}
 				else
 				{
@@ -3521,7 +3521,7 @@ inicioVND:
 		goto inicioVND;
 	}
 	
-	vnd_current = v2_VND(ch, vnd_incumbent);
+	vnd_current = v2_VND(gd, vnd_incumbent);
 
 	if (vnd_current < vnd_incumbent)
 	{
@@ -3534,7 +3534,7 @@ inicioVND:
 	}
 
 	//segunda vizinhança do VND
-	vnd_current = v3_VND(gd, vnd_incumbent);
+	vnd_current = v3_VND(ch, vnd_incumbent);
 
 	if (vnd_current < vnd_incumbent)
 	{
@@ -3600,7 +3600,7 @@ float RVNS::v2_RVNS(float incumbentmain2)
 	float resultadov2 = 0.0;
 
 	//executar vizinhança
-	al = rand() % num_AL + 1;
+	al = rand() % (num_AL-1) + 1;
 
 	for (int i = 1; i < num_AL; i++)
 	{
@@ -3618,7 +3618,7 @@ float RVNS::v2_RVNS(float incumbentmain2)
 		}
 	}
 
-	for (int i = chaves_i; i < chaves_f; i++)
+	for (int i = chaves_i + 1; i < chaves_f + 1; i++)
 	{
 		gd = rand() % agd.qntGD_SIS + 1;
 
@@ -3658,7 +3658,7 @@ float RVNS::v2_RVNS_AUX(float incumbentmain2, int al)
 		}
 	}
 
-	for (int i = chaves_i; i < chaves_f; i++)
+	for (int i = chaves_i + 1; i < chaves_f + 1; i++)
 	{
 		gd = rand() % agd.qntGD_SIS + 1;
 
@@ -3683,7 +3683,7 @@ float RVNS::v3_RVNS(float incumbentmain3)
 	float resultadov3 = 0.0;
 
 	//executar vizinhança
-	al = rand() % num_AL + 1;
+	al = rand() % (num_AL-1) + 1;
 
 	for (int i = 1; i < num_AL; i++)
 	{
@@ -3701,7 +3701,7 @@ float RVNS::v3_RVNS(float incumbentmain3)
 		}
 	}
 
-	for (int i = gd_i; i < gd_f; i++)
+	for (int i = gd_i + 1; i < gd_f + 1; i++)
 	{
 		ch = rand() % ac.numch_SIS + 1;
 
@@ -3741,7 +3741,7 @@ float RVNS::v3_RVNS_AUX(float incumbentmain3, int al)
 		}
 	}
 
-	for (int i = gd_i; i < gd_f; i++)
+	for (int i = gd_i + 1; i < gd_f + 1; i++)
 	{
 		ch = rand() % ac.numch_SIS + 1;
 
@@ -3779,17 +3779,27 @@ inicioopGD:
 	al = gvns.localizaAL(eqpto);
 
 	//adiciona GD
+	bool nova_posicao = false;
+
 	for (int i = 1; i < linha_dados; i++)
 	{
-		if (agd.posicaoGD[al][i] == 0)
+		if (agd.posicaoGD[al][i] == eqpto)
 		{
-			agd.posicaoGD[al][i] = eqpto; //adiciona gd na posicao
+			//ja tem a posicao, somente adiciona o GD nela
+			nova_posicao = false;
 			agd.quantGD[eqpto]++;
 			break;
 		}
+		else if (agd.posicaoGD[al][i] == 0)
+		{
+			nova_posicao = true;
+			agd.posicaoGD[al][i] = eqpto; //adiciona gd na posicao
+			agd.quantGD[eqpto]++; //incrementa quantidade de GD na barra
+			break;
+		}
 	}
-	agd.numgd_AL[al]++; //adiciona o gd nos contadores
-	agd.qntGD_SIS++;
+	agd.numgd_AL[al]++; //adiciona o gd nos contadores do alimentador
+	agd.qntGD_SIS++; //adiciona o gd nos contadores do sistema
 
 	//executar vizinhança 3 no alimentador que o gd foi selecionada
 	float resultado = 0.0;
@@ -3802,18 +3812,21 @@ inicioopGD:
 	}
 	else
 	{
-		//exclui GD
-		for (int i = 1; i < linha_dados; i++)
+		//exclui posicao do GD
+		if (nova_posicao)
 		{
-			if (agd.posicaoGD[al][i+1] == 0)
+			for (int i = 1; i < linha_dados; i++)
 			{
-				agd.posicaoGD[al][i] = 0; //exclui gd na posicao
-				agd.quantGD[eqpto]--;
-				break;
+				if (agd.posicaoGD[al][i + 1] == 0)
+				{
+					agd.posicaoGD[al][i] = 0; //exclui gd na posicao
+					break;
+				}
 			}
 		}
 		agd.numgd_AL[al]--; //retira o gd nos contadores
 		agd.qntGD_SIS--;
+		agd.quantGD[eqpto]--; //retira gd inserido
 
 		//retorna valor anterior
 		return incumbentmain4;
