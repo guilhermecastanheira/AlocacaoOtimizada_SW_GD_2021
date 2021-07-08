@@ -2105,7 +2105,8 @@ float FuncaoObjetivo::calculo_funcao_objetivo(int p_AL)
 			//3) Calculo da ENS pelo sistema caso ocorra falha na seção j do alimentador i para cada um dos cenarios possiveis em um ano
 
 			bool operacaoILHA = false;
-
+			ps.leitura_parametros();
+			fxp.fluxo_potencia();
 
 			//3.1) Operação em Ilha - NAO CONSIDERAR
 			if (ps.cenario_is[i2] != 0)
@@ -2630,7 +2631,8 @@ float FuncaoObjetivo::calculo_funcao_objetivo_geral()
 				//3) Calculo da ENS pelo sistema caso ocorra falha na seção j do alimentador i para cada um dos cenarios possiveis em um ano
 
 				bool operacaoILHA = false;
-				
+				ps.leitura_parametros();
+				fxp.fluxo_potencia();
 				
 				//3.1) Operação em Ilha - NAO CONSIDERAR
 				if (ps.cenario_is[i2] != 0)
